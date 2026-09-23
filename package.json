@@ -1,0 +1,27 @@
+{
+  "name": "mahsood-tyre-manager",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Sales, Inventory & Shop Management System",
+  "type": "module",
+  "main": "electron/main.cjs",
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "build": "vite build",
+    "start": "node scripts/start.mjs",
+    "test:electron": "node scripts/start.mjs --smoke",
+    "test:electron:dev": "node scripts/dev.mjs --smoke"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "dependencies": {
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^6.1.1",
+    "electron": "^44.4.5",
+    "vite": "^8.3.0"
+  }
+}
