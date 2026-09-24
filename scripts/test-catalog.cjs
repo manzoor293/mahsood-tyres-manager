@@ -120,7 +120,7 @@ app.whenReady().then(async () => {
     assert.equal(result.unknown.error.code, 'VALIDATION');
     assert.equal(result.node, 'undefined');
     assert.equal(result.invoke, 'undefined');
-    assert.equal(Object.values(result.methods).flat().length, 13);
+    assert.equal(['brands', 'categories', 'products'].flatMap((resource) => result.methods[resource]).length, 13);
     allowed.clear();
     const forbidden = await window.webContents.executeJavaScript('window.api.products.list()');
     assert.equal(forbidden.error.code, 'FORBIDDEN');

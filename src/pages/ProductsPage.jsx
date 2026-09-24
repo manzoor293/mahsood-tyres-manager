@@ -3,6 +3,7 @@ import { Alert, Button, CircularProgress, Dialog, DialogActions, DialogContent, 
 import AppIcon from '../components/AppIcon.jsx';
 import ProductDialog from '../components/products/ProductDialog.jsx';
 import ProductTable from '../components/products/ProductTable.jsx';
+import LookupManagerDialog from '../components/products/LookupManagerDialog.jsx';
 import useProductCatalog, { pageSize } from '../hooks/useProductCatalog.js';
 import { catalogApi, catalogRequest } from '../utils/catalog.js';
 
@@ -13,6 +14,7 @@ export default function ProductsPage() {
   const [page, setPage] = useState(0);
   const catalog = useProductCatalog(filters, page);
   const [editor, setEditor] = useState(null);
+  const [manager, setManager] = useState(null);
   const [editLoading, setEditLoading] = useState(false);
   const [deactivate, setDeactivate] = useState(null);
   const [deactivating, setDeactivating] = useState(false);
@@ -46,7 +48,11 @@ export default function ProductsPage() {
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div><h1 id="page-title" className="text-3xl font-semibold tracking-tight text-slate-900">Products / Tyres</h1>
           <p className="mt-2 text-sm text-slate-500">Manage your tyre catalogue, pricing and product details.</p></div>
-        <Button aria-label="Add Product" variant="contained" onClick={() => setEditor({ product: null })} disabled={catalog.options.loading || Boolean(catalog.options.error)} startIcon={<span aria-hidden="true">+</span>}>Add Product</Button>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outlined" onClick={() => setManager('brands')}>Manage Brands</Button>
+          <Button variant="outlined" onClick={() => setManager('categories')}>Manage Categories</Button>
+          <Button aria-label="Add Product" variant="contained" onClick={() => setEditor({ product: null })} disabled={catalog.options.loading || Boolean(catalog.options.error)} startIcon={<span aria-hidden="true">+</span>}>Add Product</Button>
+        </div>
       </div>
       {catalog.options.error && <Alert severity="error" sx={{ mt: 3 }} action={<Button color="inherit" onClick={catalog.refresh}>Retry</Button>}>{catalog.options.error}</Alert>}
       {actionError && <Alert severity="error" sx={{ mt: 2 }} onClose={() => setActionError('')}>{actionError}</Alert>}
@@ -79,6 +85,7 @@ export default function ProductsPage() {
         </div>
       </Paper>
       {editor && <ProductDialog product={editor.product} brands={catalog.options.brands} categories={catalog.options.categories} onClose={() => setEditor(null)} onSaved={saved} />}
+      {manager && <LookupManagerDialog key={manager} resource={manager} onClose={() => setManager(null)} onChanged={catalog.refresh} />}
       <Dialog open={Boolean(deactivate)} onClose={() => { if (!deactivating) setDeactivate(null); }} aria-labelledby="deactivate-title" maxWidth="xs" fullWidth>
         <DialogTitle id="deactivate-title">Deactivate product?</DialogTitle>
         <DialogContent><DialogContentText>{deactivate?.sku} will be hidden from the active product list. Its history and current stock will be retained.</DialogContentText>{confirmationError && <Alert severity="error" sx={{ mt: 2 }}>{confirmationError}</Alert>}</DialogContent>

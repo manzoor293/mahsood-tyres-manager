@@ -54,7 +54,7 @@ export default function ProductDialog({ product, brands, categories, onClose, on
         <DialogContent dividers>
           <p className="mb-5 text-sm text-slate-500">Product details and pricing. Stock is managed separately.</p>
           {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-          {missingOptions && <Alert severity="info" sx={{ mb: 2 }}>An active brand and category are needed for a new product. {product ? 'Existing selections can be retained.' : 'No brand or category creation is available on this page.'}</Alert>}
+          {missingOptions && <Alert severity="info" sx={{ mb: 2 }}>An active brand and category are needed for a new product. {product ? 'Existing selections can be retained.' : 'Close this form and use Manage Brands or Manage Categories to add them.'}</Alert>}
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
             <TextField label="SKU" name="sku" required autoFocus value={values.sku} onChange={change('sku')} disabled={saving} error={Boolean(errors.sku)} helperText={errors.sku} slotProps={{ htmlInput: { maxLength: 200 } }} />
             {[[brands, 'brand_id', 'Brand'], [categories, 'category_id', 'Category']].map(([rows, field, label]) => (

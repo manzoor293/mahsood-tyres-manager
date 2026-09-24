@@ -12,6 +12,9 @@
     "test:db": "node scripts/start.mjs --db",
     "test:products": "node scripts/start.mjs --catalog",
     "test:products:ui": "node scripts/test-products-ui.mjs",
+    "test:lookups:ui": "node scripts/test-products-ui.mjs --lookups",
+    "test:suppliers": "node scripts/start.mjs --suppliers",
+    "test:suppliers:ui": "node scripts/test-products-ui.mjs --suppliers",
     "test:electron": "node scripts/start.mjs --smoke",
     "test:electron:dev": "node scripts/dev.mjs --smoke"
   },

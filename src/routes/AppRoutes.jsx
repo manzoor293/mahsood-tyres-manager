@@ -3,6 +3,7 @@ import { lazy, Suspense } from 'react';
 import AppLayout from '../layouts/AppLayout.jsx';
 import PlaceholderPage from '../pages/PlaceholderPage.jsx';
 const ProductsPage = lazy(() => import('../pages/ProductsPage.jsx'));
+const SuppliersPage = lazy(() => import('../pages/SuppliersPage.jsx'));
 import { navigation } from './navigation.js';
 
 export default function AppRoutes() {
@@ -10,7 +11,7 @@ export default function AppRoutes() {
     <Routes>
       <Route element={<AppLayout />}>
         <Route index element={<Navigate to="/dashboard" replace />} />
-        {navigation.map((page) => <Route key={page.path} path={page.path} element={page.path === '/products' ? <Suspense fallback={<p role="status">Loading products…</p>}><ProductsPage /></Suspense> : <PlaceholderPage {...page} />} />)}
+        {navigation.map((page) => <Route key={page.path} path={page.path} element={page.path === '/products' ? <Suspense fallback={<p role="status">Loading products…</p>}><ProductsPage /></Suspense> : page.path === '/suppliers' ? <Suspense fallback={<p role="status">Loading suppliers…</p>}><SuppliersPage /></Suspense> : <PlaceholderPage {...page} />} />)}
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Route>
     </Routes>

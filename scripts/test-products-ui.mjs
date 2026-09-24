@@ -7,7 +7,8 @@ import electron from 'electron';
 const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'mahsood-products-ui-'));
 const env = { ...process.env, MAHSOOD_UI_TEST_DATA: directory };
 delete env.ELECTRON_RUN_AS_NODE;
-const child = spawn(electron, ['scripts/test-products-ui.cjs', ...(process.argv.includes('--dev') ? ['--dev'] : [])], { stdio: 'inherit', env });
+const entry = process.argv.includes('--suppliers') ? 'scripts/test-suppliers-ui.cjs' : process.argv.includes('--lookups') ? 'scripts/test-lookups-ui.cjs' : 'scripts/test-products-ui.cjs';
+const child = spawn(electron, [entry, ...(process.argv.includes('--dev') ? ['--dev'] : [])], { stdio: 'inherit', env });
 let finished = false;
 function finish(code) {
   if (finished) return;
