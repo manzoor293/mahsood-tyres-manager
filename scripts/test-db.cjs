@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const { getDatabasePath, openDatabase } = require('../electron/database/index.cjs');
+const { schemaVersion } = require('../electron/database/migrate.cjs');
 
 app.setName('Mahsood Tyre Manager');
 
@@ -50,7 +51,7 @@ app.whenReady().then(() => {
     console.log(`Database: ${filename}`);
     database = openDatabase(filename, { readonly: true });
     const existingTables = new Set(database.prepare("SELECT name FROM sqlite_schema WHERE type = 'table'").all().map((row) => row.name));
-    check('Schema version is 1', () => assert.equal(database.pragma('user_version', { simple: true }), 1));
+    check(`Schema version is ${schemaVersion}`, () => assert.equal(database.pragma('user_version', { simple: true }), schemaVersion));
     check('All 16 expected tables exist', () => {
       for (const table of tables) assert.ok(existingTables.has(table), `Missing table: ${table}`);
     });

@@ -3,7 +3,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { openDatabase, initializeDatabase } = require('../electron/database/index.cjs');
-const { migrate } = require('../electron/database/migrate.cjs');
+const { migrate, schemaVersion } = require('../electron/database/migrate.cjs');
 
 const expectedTables = [
   'brands', 'categories', 'products', 'suppliers', 'customers', 'purchases',
@@ -13,7 +13,7 @@ const expectedTables = [
 
 function verifySchema(database) {
   assert.deepEqual(database.prepare("SELECT name FROM sqlite_schema WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name").all().map((row) => row.name), expectedTables);
-  assert.equal(database.pragma('user_version', { simple: true }), 1);
+  assert.equal(database.pragma('user_version', { simple: true }), schemaVersion);
   assert.equal(database.pragma('foreign_keys', { simple: true }), 1);
   assert.equal(database.pragma('journal_mode', { simple: true }), 'wal');
   assert.equal(database.pragma('integrity_check', { simple: true }), 'ok');

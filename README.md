@@ -32,12 +32,12 @@ This builds renderer assets, not an installer. Electron loads `dist/index.html` 
 - `src/pages/PlaceholderPage.jsx`: shared placeholder for the nine modules, without sample data or business actions.
 - `src/styles.css`: Tailwind v4 import and base styles. Tailwind handles layout; Material UI uses its theme and `sx` for component styling.
 - `electron/main.cjs`: window lifecycle, local content loading, and security policy. Future privileged operations belong here.
-- `electron/preload.cjs`: isolated context bridge exposing only `desktop.isElectron`. No generic IPC or Node API is exposed.
+- `electron/preload.cjs`: isolated context bridge exposing `desktop.isElectron` and explicit `window.api` catalog methods. No generic IPC or Node API is exposed.
 - `scripts/dev.mjs`: Vite/Electron startup and shutdown.
 - `scripts/start.mjs`: built-app launcher; both launchers clear inherited `ELECTRON_RUN_AS_NODE` so Electron opens as a desktop application.
 - `vite.config.js`: React tooling, local development address, and relative build paths.
 
-Context isolation and renderer sandboxing are enabled; Node integration is disabled. Document navigation, new windows, webviews, and permission requests are blocked. Hash navigation stays inside the current document. The content security policy allows local scripts and Vite's local WebSocket; inline styles support Vite's CSS updates and Emotion. Database initialization runs only in Electron's main process. No database IPC, authentication, or business UI is implemented.
+Context isolation and renderer sandboxing are enabled; Node integration is disabled. Document navigation, new windows, webviews, and permission requests are blocked. Hash navigation stays inside the current document. The content security policy allows local scripts and Vite's local WebSocket; inline styles support Vite's CSS updates and Emotion. Database operations run only in Electron's main process. Catalog IPC validates the application window, main frame, exact document URL (allowing hash navigation), and inputs. No authentication or business UI is implemented.
 
 Routes: Dashboard, Products / Tyres, Suppliers, Purchases, Sales / POS, Customers, Expenses, Reports, and Settings. Fonts and icons are local and require no network access.
 
@@ -62,6 +62,7 @@ They also verify database initialization in the main process, all 16 tables, WAL
 - `electron/database/index.cjs`: opens the database after Electron is ready, enables foreign keys and WAL, migrates before opening the window, and closes on normal exit. Importing a connection from a renderer or ordinary Node process is rejected.
 - `electron/database/migrate.cjs`: ordered migrations tracked by `PRAGMA user_version`; pending migrations and version changes run in one immediate transaction. Failed migrations roll back; newer database versions are rejected. Add a new numbered migration to the ordered list for future changes; do not edit an applied migration or recreate existing tables at startup.
 - `electron/database/migrations/001-initial.sql`: schema version 1, indexes, and inventory integrity triggers.
+- `electron/database/migrations/002-catalog-status.sql`: schema version 2 adds active status and update timestamps to brands/categories, preserving existing rows. Existing update timestamps are backfilled from creation timestamps; catalog services set them on all subsequent writes.
 - `scripts/verify-database.cjs`: database verification invoked by both Electron smoke checks.
 
 The path in both development and built-assets production mode is `path.join(app.getPath('userData'), 'database', 'mahsood-tyre-manager.sqlite3')`. On this Windows account it resolves to `C:\Users\DELL\AppData\Roaming\Mahsood Tyre Manager\database\mahsood-tyre-manager.sqlite3`. Startup prints the actual path. Development and production currently share this database. SQLite may create adjacent `-wal` and `-shm` files while open. This project does not yet produce a packaged installer.
@@ -77,3 +78,23 @@ Schema conventions:
 - Every product starts with a zero inventory row. Append-only signed stock movements are the only way to change its quantity. Triggers reject negative inventory, mismatched direction, direct quantity changes, and ledger edits/deletes. Returns and adjustments are new movements. Purchase/sale movements require matching product/line foreign keys. Services must later enforce posting idempotency and return limits.
 - Payments are independent records, optionally allocated to an invoice; balances are calculated from invoices and payments rather than overwritten paid fields. A supplier/customer must match the allocated invoice. Anonymous customer payments require an anonymous sale. Unallocated payments require a named party. Payment methods are nonempty text so future methods do not require a schema migration.
 - Foreign keys restrict deleting referenced records. Deactivate products/parties to preserve historical records. Settings values are text; no default shop settings or sample business data are seeded.
+
+## Catalog backend API
+
+`electron/repositories/catalog.cjs` contains parameterized SQL. `electron/services/catalog.cjs` handles validation and write transactions, using `services/validation.cjs`. `electron/ipc/catalog.cjs` registers only the catalog methods; SQL and database handles never cross the preload bridge.
+
+All methods return promises resolving to `{ ok: true, data }` or `{ ok: false, error: { code, message } }`. Expected error codes are `VALIDATION`, `NOT_FOUND`, `CONFLICT`, and `FORBIDDEN`; unexpected failures return `INTERNAL` without SQL details. Transport failures may reject the promise.
+
+| API | Methods |
+| --- | --- |
+| `window.api.brands` | `list(filters?)`, `create({name})`, `update(id, {name})`, `deactivate(id)` |
+| `window.api.categories` | `list(filters?)`, `create({name})`, `update(id, {name})`, `deactivate(id)` |
+| `window.api.products` | `list(filters?)`, `getById(id)`, `create(data)`, `update(id, patch)`, `deactivate(id)` |
+
+Lists return arrays, defaulting to active records, `limit: 100`, `offset: 0`. Filters accept `active: true | false | 'all'`, a limit from 1 to 500, and a nonnegative offset. Product filters additionally accept `search` (SKU, brand name, model, or size), individual `sku`, `brand`, `model`, `size` text filters, and exact `brand_id`/`category_id`. Text searches use literal substrings with SQLite's ASCII case folding; `%` and `_` are literal characters. Combined filters use AND; `search` matches any of its four fields. Lists are ordered by name/SKU then ID for stable pagination.
+
+Product creation requires `sku`, `brand_id`, `category_id`, `model`, and `size`. Optional fields are `pattern`, `tyre_type`, `notes`, `default_selling_price` (integer paise), and `minimum_stock` (whole units); numeric defaults are zero. Updates are partial and preserve omitted fields. Unknown fields, caller-controlled stock/status/timestamps, unsafe integers, negative values, and duplicate SKUs/names (including inactive records) are rejected. Names and required text are trimmed and limited to 200 characters; notes allow 5000. Nullable descriptive fields can be cleared with `null` or blank text.
+
+New links must reference active brands/categories. Existing links survive deactivation and can remain on product edits; legacy null links are preserved on unrelated edits, but new products require both links. Deactivation is idempotent and never deletes records, cascades status changes, or changes inventory. No reactivation API is provided in this phase. Product reads include `brand_name`, `category_name`, and `stock_quantity`; `getById` also reads inactive products. Creating a product and its trigger-created zero inventory row is atomic.
+
+Run `npm run test:products` to test migrations, services/repositories, validation, search, deactivation, rollback, and all 13 APIs through the real sandboxed preload/IPC bridge. Tests use a unique temporary database and remove it afterward. They never insert catalog fixtures in shop data. Both application smoke checks also exercise read-only catalog calls. Run the application to apply migration 002 before running the read-only `test:db` check against an older database.

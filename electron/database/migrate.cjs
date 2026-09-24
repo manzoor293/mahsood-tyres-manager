@@ -1,7 +1,8 @@
 const fs = require('node:fs');
 const path = require('node:path');
 
-const migrations = ['001-initial.sql'];
+const migrations = ['001-initial.sql', '002-catalog-status.sql'];
+const schemaVersion = migrations.length;
 
 function migrate(database) {
   // One write lock covers version inspection, schema changes and version updates.
@@ -17,4 +18,4 @@ function migrate(database) {
   }).immediate();
 }
 
-module.exports = { migrate };
+module.exports = { migrate, schemaVersion };

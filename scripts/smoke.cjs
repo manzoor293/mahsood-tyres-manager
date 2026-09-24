@@ -16,6 +16,12 @@ app.on('browser-window-created', (_event, window) => {
   window.webContents.once('did-finish-load', async () => {
     try {
       require('./verify-database.cjs').verifyDatabase(app);
+      const catalog = await window.webContents.executeJavaScript(`(async () => ({
+        brands: await window.api.brands.list({limit:1}),
+        categories: await window.api.categories.list({limit:1}),
+        products: await window.api.products.list({limit:1})
+      }))()`);
+      assert.ok(Object.values(catalog).every((result) => result.ok), JSON.stringify(catalog));
       let state;
       for (let attempt = 0; attempt < 100; attempt += 1) {
         state = await window.webContents.executeJavaScript(`({
