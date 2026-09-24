@@ -29,7 +29,8 @@ This builds renderer assets, not an installer. Electron loads `dist/index.html` 
 - `src/layouts/AppLayout.jsx`: persistent sidebar/header and scrollable route content.
 - `src/components/`: reusable navigation, header, and local SVG icons.
 - `src/routes/`: route definitions and shared navigation metadata; unknown routes return to Dashboard.
-- `src/pages/PlaceholderPage.jsx`: shared placeholder for the nine modules, without sample data or business actions.
+- `src/pages/ProductsPage.jsx`: Products / Tyres management interface using the existing catalog preload APIs.
+- `src/pages/PlaceholderPage.jsx`: shared placeholder for the remaining eight modules, without sample data or business actions.
 - `src/styles.css`: Tailwind v4 import and base styles. Tailwind handles layout; Material UI uses its theme and `sx` for component styling.
 - `electron/main.cjs`: window lifecycle, local content loading, and security policy. Future privileged operations belong here.
 - `electron/preload.cjs`: isolated context bridge exposing `desktop.isElectron` and explicit `window.api` catalog methods. No generic IPC or Node API is exposed.
@@ -37,13 +38,15 @@ This builds renderer assets, not an installer. Electron loads `dist/index.html` 
 - `scripts/start.mjs`: built-app launcher; both launchers clear inherited `ELECTRON_RUN_AS_NODE` so Electron opens as a desktop application.
 - `vite.config.js`: React tooling, local development address, and relative build paths.
 
-Context isolation and renderer sandboxing are enabled; Node integration is disabled. Document navigation, new windows, webviews, and permission requests are blocked. Hash navigation stays inside the current document. The content security policy allows local scripts and Vite's local WebSocket; inline styles support Vite's CSS updates and Emotion. Database operations run only in Electron's main process. Catalog IPC validates the application window, main frame, exact document URL (allowing hash navigation), and inputs. No authentication or business UI is implemented.
+Context isolation and renderer sandboxing are enabled; Node integration is disabled. Document navigation, new windows, webviews, and permission requests are blocked. Hash navigation stays inside the current document. The content security policy allows local scripts and Vite's local WebSocket; inline styles support Vite's CSS updates and Emotion. Database operations run only in Electron's main process. Catalog IPC validates the application window, main frame, exact document URL (allowing hash navigation), and inputs. Products / Tyres has a management UI; authentication and other module interfaces remain unimplemented.
 
 Routes: Dashboard, Products / Tyres, Suppliers, Purchases, Sales / POS, Customers, Expenses, Reports, and Settings. Fonts and icons are local and require no network access.
 
 Development alone permits inline scripts for React Fast Refresh's preamble. Built HTML retains the stricter script policy.
 
 ## Verification
+
+After `npm run build`, run `npm run test:products:ui` for the actual Products form/table workflow through React, preload, IPC, and SQLite. The test launches Electron with a unique temporary userData directory, seeds only test lookup records there, creates its product through the form, and verifies editing, duplicate SKU messages, currency conversion, search, brand/category/status filters, empty/loading/error/retry states, deactivation confirmation/cancellation, and narrow layout. The temporary data is removed after Electron exits. A screenshot is saved to ignored `artifacts/products-ui.png`. `npm run test:products:ui -- --dev` exercises the same workflow against an already-running Vite server on port 5173.
 
 Run `npm run test:db` for a non-destructive, windowless Electron check of the existing database. It opens the database read-only, skips migrations, and reports a PASS/FAIL checklist for schema version, tables, foreign keys, WAL, unique constraints, historical cost columns, and the resolved userData path. It inserts no test data and exits nonzero on failure. Run the application once first if the database has not been initialized. Foreign-key enforcement is checked on the connection; WAL is inspected without changing it.
 
@@ -98,3 +101,11 @@ Product creation requires `sku`, `brand_id`, `category_id`, `model`, and `size`.
 New links must reference active brands/categories. Existing links survive deactivation and can remain on product edits; legacy null links are preserved on unrelated edits, but new products require both links. Deactivation is idempotent and never deletes records, cascades status changes, or changes inventory. No reactivation API is provided in this phase. Product reads include `brand_name`, `category_name`, and `stock_quantity`; `getById` also reads inactive products. Creating a product and its trigger-created zero inventory row is atomic.
 
 Run `npm run test:products` to test migrations, services/repositories, validation, search, deactivation, rollback, and all 13 APIs through the real sandboxed preload/IPC bridge. Tests use a unique temporary database and remove it afterward. They never insert catalog fixtures in shop data. Both application smoke checks also exercise read-only catalog calls. Run the application to apply migration 002 before running the read-only `test:db` check against an older database.
+
+## Products / Tyres interface
+
+The Products route loads its own UI bundle and uses the existing sidebar/header. `src/hooks/useProductCatalog.js` loads lookup options and debounces backend searches; product results use 25-row pages with previous/next navigation. Filters include brand, category, and active/inactive/all status. Stale requests are ignored when filters change. Lookup lists include inactive entries for filtering; product forms permit active selections and retain a product's existing inactive selection.
+
+`src/components/products/ProductTable.jsx` displays catalog details, selling price, stock, minimum stock, status, and edit/deactivate actions. It scrolls horizontally while keeping actions visible. `ProductDialog.jsx` supplies the shared add/edit form with required-field and numeric feedback, backend validation messages, and disabled controls while saving. Main-process validation remains authoritative. New products require existing active brands and categories; their creation is not part of this screen. There is no editable stock quantity or permanent delete action.
+
+`src/utils/catalog.js` unwraps API results and converts rupee input to integer paise without accepting more than two decimal places. Displayed prices use `Rs. 24,500` (or `Rs. 24,500.50` when paise are present). Deactivation requires confirmation and preserves stock/history. No schema, IPC, preload, or backend changes are needed by this UI.

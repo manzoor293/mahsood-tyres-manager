@@ -11,6 +11,7 @@
     "start": "node scripts/start.mjs",
     "test:db": "node scripts/start.mjs --db",
     "test:products": "node scripts/start.mjs --catalog",
+    "test:products:ui": "node scripts/test-products-ui.mjs",
     "test:electron": "node scripts/start.mjs --smoke",
     "test:electron:dev": "node scripts/dev.mjs --smoke"
   },
