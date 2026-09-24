@@ -9,6 +9,7 @@
     "dev": "node scripts/dev.mjs",
     "build": "vite build",
     "start": "node scripts/start.mjs",
+    "test:db": "node scripts/start.mjs --db",
     "test:electron": "node scripts/start.mjs --smoke",
     "test:electron:dev": "node scripts/dev.mjs --smoke"
   },
@@ -19,6 +20,7 @@
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
     "@mui/material": "^9.4.0",
+    "better-sqlite3": "^13.0.3",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "react-router-dom": "^7.18.4"

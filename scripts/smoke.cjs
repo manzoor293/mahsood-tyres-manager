@@ -15,6 +15,7 @@ app.on('browser-window-created', (_event, window) => {
   });
   window.webContents.once('did-finish-load', async () => {
     try {
+      require('./verify-database.cjs').verifyDatabase(app);
       let state;
       for (let attempt = 0; attempt < 100; attempt += 1) {
         state = await window.webContents.executeJavaScript(`({
