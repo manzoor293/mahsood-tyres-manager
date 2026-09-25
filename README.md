@@ -82,6 +82,39 @@ Schema conventions:
 - Payments are independent records, optionally allocated to an invoice; balances are calculated from invoices and payments rather than overwritten paid fields. A supplier/customer must match the allocated invoice. Anonymous customer payments require an anonymous sale. Unallocated payments require a named party. Payment methods are nonempty text so future methods do not require a schema migration.
 - Foreign keys restrict deleting referenced records. Deactivate products/parties to preserve historical records. Settings values are text; no default shop settings or sample business data are seeded.
 
+## Inventory / Stock Management
+
+The Inventory navigation entry opens Current Stock and Stock Movements tabs. Current quantities are read from `inventory`, joined to product descriptions, brands and categories. Search matches SKU, brand, model or size; brand/category, product activity and stock-level filters combine with AND. Out of Stock means zero; Low Stock means a positive quantity at or below `minimum_stock`; In Stock means above the minimum. Inactive products retain both their stock-level badge and an Inactive Product badge, and cannot be adjusted. The UI shows all product activity states by default; the stock API defaults to active products.
+
+History shows every existing movement type, signed quantity changes, notes, invoice references when available, and the ledger balance after each movement. Balances use insertion ID order before filtering or pagination, not an invoice's business date. Timestamps display in local time; date filters explicitly use UTC dates. Descriptions reflect current product/lookup names. Product-row History opens that product's movements; Reset filters clears the product restriction. Both tabs page through 50 rows and support loading, empty, error/retry and refresh states.
+
+`window.api.inventory` uses the existing `{ok,data}` / `{ok:false,error}` envelope:
+
+| Method | Input |
+| --- | --- |
+| `list(filters?)` | `search`, `brand_id`, `category_id`, `active` (`true`, `false`, `'all'`), `stock_status` (`all`, `in`, `low`, `out`), `limit` (1–500), `offset` |
+| `getProductStock(productId)` | Positive integer product ID; includes inactive products |
+| `listMovements(filters?)` | Shared search/brand/category/activity/paging filters, optional `product_id`, `movement_type`, `from_date`, `to_date` (YYYY-MM-DD); activity defaults to all |
+| `adjust(data)` | `product_id`, `movement_type` (`ADJUSTMENT_IN` / `ADJUSTMENT_OUT`), positive integer `quantity`, required `notes`, optional `expected_quantity` |
+
+Adjust Stock fetches current stock and requires a separate confirmation showing current, change and expected resulting quantities. The UI sends `expected_quantity` to reject stale confirmations and disables repeated saves. This value is only a concurrency check: the main process independently reads stock, validates product activity, quantity, reason, safe integer bounds and sufficient stock inside an immediate SQLite transaction. It inserts exactly one movement; the existing `movements_apply_inventory` trigger is the sole writer of inventory quantity. Any ledger/trigger failure rolls back both movement and stock change. There is no `setStock`, generic SQL, deletion or movement-edit API.
+
+Schema stays at **version 2**. The schema requires `unit_cost` on every movement, so manual adjustments record the latest inserted purchase item's historical cost, or zero when no purchase cost is known. This is a reference cost, not a new inventory valuation/accounting model; users cannot submit costs through the adjustment API. Sales, returns, opening-stock entry, supplier payments, reports and other accounting workflows remain outside this module.
+
+`npm run test:inventory` covers stock and history filters, boundary statuses, purchase references, both adjustment directions, validation, stale stock, insufficient stock, persistence, IPC guards and rollback during movement/inventory processing. `npm run test:inventory:ui` (after building) drives the actual renderer/preload/IPC workflow for search, filters, history, confirmation/cancel, both adjustments, validation, insufficient/stale stock, retry and narrow layouts. Both tests use the isolated runner's temporary database/profile and clean up after Electron exits. The UI screenshot is written to ignored `artifacts/inventory-ui.png`. Production and development smoke checks include Inventory navigation and read-only inventory APIs.
+
+## Purchases
+
+The Purchases route supports stock receipt entry, searchable product selection, multiple unique products, supplier/date/payment filters, paginated invoices and read-only details. Enter money in rupees; the bridge sends safe integer paise. Unit costs must be positive, quantities positive whole numbers, and discounts/payments nonnegative. Payments cannot exceed the discounted total.
+
+`window.api.purchases` exposes only `list(filters?)`, `getById(id)` and `create(data)`, using the same result/error envelope as catalog APIs. Create accepts `supplier_id`, unique `invoice_number`, `purchased_at` (`YYYY-MM-DD`), optional `notes`, `items: [{product_id, quantity, unit_cost}]`, optional `discount`, `paid_amount` and `payment_method` (defaults to Cash). Calculated fields and unknown fields are rejected; the main process computes line totals, subtotal, total and balance. List filters are `search`, `supplier_id`, `from_date`, `to_date`, `payment_status` (`all`, `unpaid`, `partial`, `paid`), `limit` (1–500) and `offset`. Search matches invoice or current supplier name. Results include payment sums and item counts; details include historical item costs and payments.
+
+The service validates and writes inside one immediate SQLite transaction. Each purchase item creates one linked PURCHASE stock movement; the existing trigger increases inventory. No direct inventory updates occur. A positive initial payment creates a linked supplier_payments record in the same transaction. Any failure rolls back the header, items, movements, stock projection and payment. Supplier/product activity is checked inside the transaction; historical purchases remain readable after deactivation.
+
+Schema remains **2**. Other costs are unavailable because the existing schema requires `total = subtotal - discount`. Completed purchases are read-only until a transactional correction/reversal design exists. Editing, deletion, returns, subsequent payment entry and supplier credits/prepayments are deferred. Supplier/product descriptions reflect current directory values; item quantity and unit cost remain historical.
+
+Run `npm run test:purchases` and, after `npm run build`, `npm run test:purchases:ui`. Both use temporary databases and userData directories removed by the parent runner after Electron exits. Backend tests include failures on the second stock movement and on payment insertion, verifying all five affected tables are unchanged. UI tests drive actual React controls through preload/IPC, including validation, duplicate prevention, repeated-submit protection, filters, details and retry states. Electron smoke checks also exercise the purchases list API.
+
 ## Catalog backend API
 
 `electron/repositories/catalog.cjs` contains parameterized SQL. `electron/services/catalog.cjs` handles validation and write transactions, using `services/validation.cjs`. `electron/ipc/catalog.cjs` registers only the catalog methods; SQL and database handles never cross the preload bridge.

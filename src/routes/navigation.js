@@ -3,6 +3,7 @@ export const navigation = [
   { path: '/products', title: 'Products / Tyres', icon: 'tyre', description: 'A dedicated space for your tyre and product catalogue.' },
   { path: '/suppliers', title: 'Suppliers', icon: 'truck', description: 'A dedicated space for your supplier directory.' },
   { path: '/purchases', title: 'Purchases', icon: 'bag', description: 'A dedicated space for purchase records.' },
+  { path: '/inventory', title: 'Inventory', icon: 'inventory', description: 'Current stock, movement history and stock adjustments.' },
   { path: '/sales', title: 'Sales / POS', icon: 'receipt', description: 'A dedicated space for sales and point of sale.' },
   { path: '/customers', title: 'Customers', icon: 'people', description: 'A dedicated space for your customer directory.' },
   { path: '/expenses', title: 'Expenses', icon: 'wallet', description: 'A dedicated space for shop expenses.' },

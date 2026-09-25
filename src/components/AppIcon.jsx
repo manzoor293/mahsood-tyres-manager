@@ -1,4 +1,5 @@
 const paths = {
+  inventory: 'M3 7l9-4 9 4v10l-9 4-9-4z M3 7l9 4 9-4 M12 11v10 M7 5l10 4',
   dashboard: 'M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z',
   tyre: 'M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0 M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0 M12 3v3 M12 18v3 M3 12h3 M18 12h3',
   truck: 'M3 5h11v12H3z M14 9h4l3 4v4h-7 M5 17v3h3v-3 M16 17v3h3v-3',

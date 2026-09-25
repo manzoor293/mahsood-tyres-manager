@@ -3,6 +3,10 @@ const path = require('node:path');
 const { pathToFileURL } = require('node:url');
 const { createCatalogServices } = require('./services/catalog.cjs');
 const { createSupplierService } = require('./services/suppliers.cjs');
+const { createInventoryService } = require('./services/inventory.cjs');
+const { registerInventoryIpc } = require('./ipc/inventory.cjs');
+const { createPurchaseService } = require('./services/purchases.cjs');
+const { registerPurchaseIpc } = require('./ipc/purchases.cjs');
 const { registerSupplierIpc } = require('./ipc/suppliers.cjs');
 const { registerCatalogIpc, createSenderGuard } = require('./ipc/catalog.cjs');
 const { initializeDatabase, closeDatabase } = require('./database/index.cjs');
@@ -56,8 +60,10 @@ function fail(error) {
 
 app.whenReady().then(async () => {
   const database = initializeDatabase(app);
+  registerInventoryIpc(ipcMain, createInventoryService(database), createSenderGuard(allowedContents, rendererUrl));
   registerCatalogIpc(ipcMain, createCatalogServices(database), createSenderGuard(allowedContents, rendererUrl));
   registerSupplierIpc(ipcMain, createSupplierService(database), createSenderGuard(allowedContents, rendererUrl));
+  registerPurchaseIpc(ipcMain, createPurchaseService(database), createSenderGuard(allowedContents, rendererUrl));
   console.log(`Database initialized (schema ${database.pragma('user_version', { simple: true })}): ${database.name}`);
   session.defaultSession.setPermissionRequestHandler((_contents, _permission, callback) => callback(false));
   session.defaultSession.setPermissionCheckHandler(() => false);

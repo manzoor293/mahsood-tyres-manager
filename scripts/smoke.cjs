@@ -20,7 +20,10 @@ app.on('browser-window-created', (_event, window) => {
         brands: await window.api.brands.list({limit:1}),
         categories: await window.api.categories.list({limit:1}),
         products: await window.api.products.list({limit:1}),
-        suppliers: await window.api.suppliers.list({limit:1})
+        suppliers: await window.api.suppliers.list({limit:1}),
+        purchases: await window.api.purchases.list({limit:1}),
+        inventory: await window.api.inventory.list({limit:1}),
+        movements: await window.api.inventory.listMovements({limit:1})
       }))()`);
       assert.ok(Object.values(catalog).every((result) => result.ok), JSON.stringify(catalog));
       let state;
@@ -60,6 +63,7 @@ app.on('browser-window-created', (_event, window) => {
       const pages = [
         ['dashboard', 'Dashboard'], ['products', 'Products / Tyres'],
         ['suppliers', 'Suppliers'], ['purchases', 'Purchases'], ['sales', 'Sales / POS'],
+        ['inventory', 'Inventory'],
         ['customers', 'Customers'], ['expenses', 'Expenses'], ['reports', 'Reports'], ['settings', 'Settings'],
       ];
       for (const [route, title] of pages) {
@@ -91,7 +95,7 @@ app.on('browser-window-created', (_event, window) => {
       window.setSize(640, 480);
       await new Promise((resolve) => setTimeout(resolve, 250));
       assert.equal(await window.webContents.executeJavaScript('document.documentElement.scrollWidth > innerWidth'), false);
-      console.log(`PASS (${mode}): all nine routes, active navigation, hash reload, fallback, Tailwind/MUI styles, narrow window, preload bridge, isolation and sandbox.`);
+      console.log(`PASS (${mode}): all ten routes, active navigation, hash reload, fallback, Tailwind/MUI styles, narrow window, preload bridge, isolation and sandbox.`);
       clearTimeout(timeout);
       app.quit();
     } catch (error) {
