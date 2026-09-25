@@ -7,8 +7,9 @@ const InventoryPage = lazy(() => import('../pages/InventoryPage.jsx'));
 const PurchasesPage = lazy(() => import('../pages/PurchasesPage.jsx'));
 const SuppliersPage = lazy(() => import('../pages/SuppliersPage.jsx'));
 const CustomersPage = lazy(() => import('../pages/CustomersPage.jsx'));
+const SalesPage = lazy(() => import('../pages/SalesPage.jsx'));
 import { navigation } from './navigation.js';
-const implementedPages = { '/products': ProductsPage, '/suppliers': SuppliersPage, '/purchases': PurchasesPage, '/inventory': InventoryPage, '/customers': CustomersPage };
+const implementedPages = { '/products': ProductsPage, '/suppliers': SuppliersPage, '/purchases': PurchasesPage, '/inventory': InventoryPage, '/customers': CustomersPage, '/sales': SalesPage };
 
 export default function AppRoutes() {
   return (

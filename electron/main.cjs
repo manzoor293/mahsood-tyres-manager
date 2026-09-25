@@ -3,6 +3,8 @@ const path = require('node:path');
 const { pathToFileURL } = require('node:url');
 const { createCatalogServices } = require('./services/catalog.cjs');
 const { createSupplierService } = require('./services/suppliers.cjs');
+const { createSaleService } = require('./services/sales.cjs');
+const { registerSaleIpc } = require('./ipc/sales.cjs');
 const { createCustomerService } = require('./services/customers.cjs');
 const { registerCustomerIpc } = require('./ipc/customers.cjs');
 const { createInventoryService } = require('./services/inventory.cjs');
@@ -15,8 +17,12 @@ const { initializeDatabase, closeDatabase } = require('./database/index.cjs');
 
 app.setName('Mahsood Tyre Manager');
 const development = !app.isPackaged && process.argv.includes('--dev');
+const developmentPort = Number(process.env.MAHSOOD_DEV_PORT || 5173);
+if (development && (!Number.isInteger(developmentPort) || developmentPort < 1 || developmentPort > 65535)) {
+  throw new Error('Invalid local development port.');
+}
 const allowedContents = new Set();
-const rendererUrl = development ? 'http://127.0.0.1:5173/'
+const rendererUrl = development ? `http://127.0.0.1:${developmentPort}/`
   : pathToFileURL(path.join(__dirname, '../dist/index.html')).href;
 
 async function createWindow() {
@@ -49,7 +55,7 @@ async function createWindow() {
   window.once('ready-to-show', () => window.show());
 
   if (development) {
-    await window.loadURL('http://127.0.0.1:5173');
+    await window.loadURL(rendererUrl);
   } else {
     await window.loadFile(path.join(__dirname, '../dist/index.html'));
   }
@@ -62,6 +68,7 @@ function fail(error) {
 
 app.whenReady().then(async () => {
   const database = initializeDatabase(app);
+  registerSaleIpc(ipcMain, createSaleService(database), createSenderGuard(allowedContents, rendererUrl));
   registerCustomerIpc(ipcMain, createCustomerService(database), createSenderGuard(allowedContents, rendererUrl));
   registerInventoryIpc(ipcMain, createInventoryService(database), createSenderGuard(allowedContents, rendererUrl));
   registerCatalogIpc(ipcMain, createCatalogServices(database), createSenderGuard(allowedContents, rendererUrl));

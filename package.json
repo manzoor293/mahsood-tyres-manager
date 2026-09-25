@@ -22,7 +22,9 @@
     "test:inventory": "node scripts/test-products-ui.mjs --inventory-backend",
     "test:inventory:ui": "node scripts/test-products-ui.mjs --inventory",
     "test:customers": "node scripts/test-products-ui.mjs --customers-backend",
-    "test:customers:ui": "node scripts/test-products-ui.mjs --customers"
+    "test:customers:ui": "node scripts/test-products-ui.mjs --customers",
+    "test:sales": "node scripts/test-products-ui.mjs --sales-backend",
+    "test:sales:ui": "node scripts/test-products-ui.mjs --sales"
   },
   "engines": {
     "node": ">=22.12.0"
