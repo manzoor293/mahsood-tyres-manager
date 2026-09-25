@@ -3,6 +3,8 @@ const path = require('node:path');
 const { pathToFileURL } = require('node:url');
 const { createCatalogServices } = require('./services/catalog.cjs');
 const { createSupplierService } = require('./services/suppliers.cjs');
+const { createCustomerService } = require('./services/customers.cjs');
+const { registerCustomerIpc } = require('./ipc/customers.cjs');
 const { createInventoryService } = require('./services/inventory.cjs');
 const { registerInventoryIpc } = require('./ipc/inventory.cjs');
 const { createPurchaseService } = require('./services/purchases.cjs');
@@ -60,6 +62,7 @@ function fail(error) {
 
 app.whenReady().then(async () => {
   const database = initializeDatabase(app);
+  registerCustomerIpc(ipcMain, createCustomerService(database), createSenderGuard(allowedContents, rendererUrl));
   registerInventoryIpc(ipcMain, createInventoryService(database), createSenderGuard(allowedContents, rendererUrl));
   registerCatalogIpc(ipcMain, createCatalogServices(database), createSenderGuard(allowedContents, rendererUrl));
   registerSupplierIpc(ipcMain, createSupplierService(database), createSenderGuard(allowedContents, rendererUrl));

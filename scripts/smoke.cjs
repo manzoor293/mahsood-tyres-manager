@@ -1,4 +1,8 @@
 const { app } = require('electron');
+if (process.env.MAHSOOD_UI_TEST_DATA) {
+  app.setPath('userData', process.env.MAHSOOD_UI_TEST_DATA);
+  app.setPath('sessionData', process.env.MAHSOOD_UI_TEST_DATA);
+}
 const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
 const path = require('node:path');
@@ -21,6 +25,7 @@ app.on('browser-window-created', (_event, window) => {
         categories: await window.api.categories.list({limit:1}),
         products: await window.api.products.list({limit:1}),
         suppliers: await window.api.suppliers.list({limit:1}),
+        customers: await window.api.customers.list({limit:1}),
         purchases: await window.api.purchases.list({limit:1}),
         inventory: await window.api.inventory.list({limit:1}),
         movements: await window.api.inventory.listMovements({limit:1})

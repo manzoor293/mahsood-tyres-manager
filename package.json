@@ -20,7 +20,9 @@
     "test:purchases": "node scripts/test-products-ui.mjs --purchases-backend",
     "test:purchases:ui": "node scripts/test-products-ui.mjs --purchases",
     "test:inventory": "node scripts/test-products-ui.mjs --inventory-backend",
-    "test:inventory:ui": "node scripts/test-products-ui.mjs --inventory"
+    "test:inventory:ui": "node scripts/test-products-ui.mjs --inventory",
+    "test:customers": "node scripts/test-products-ui.mjs --customers-backend",
+    "test:customers:ui": "node scripts/test-products-ui.mjs --customers"
   },
   "engines": {
     "node": ">=22.12.0"

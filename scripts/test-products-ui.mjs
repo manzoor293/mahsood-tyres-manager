@@ -7,7 +7,10 @@ import electron from 'electron';
 const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'mahsood-products-ui-'));
 const env = { ...process.env, MAHSOOD_UI_TEST_DATA: directory };
 delete env.ELECTRON_RUN_AS_NODE;
-const entry = process.argv.includes('--inventory-backend') ? 'scripts/test-inventory.cjs'
+const entry = process.argv.includes('--smoke') ? 'scripts/smoke.cjs'
+  : process.argv.includes('--customers-backend') ? 'scripts/test-customers.cjs'
+  : process.argv.includes('--customers') ? 'scripts/test-customers-ui.cjs'
+  : process.argv.includes('--inventory-backend') ? 'scripts/test-inventory.cjs'
   : process.argv.includes('--inventory') ? 'scripts/test-inventory-ui.cjs'
   : process.argv.includes('--purchases-backend') ? 'scripts/test-purchases.cjs' : process.argv.includes('--purchases') ? 'scripts/test-purchases-ui.cjs' : process.argv.includes('--suppliers') ? 'scripts/test-suppliers-ui.cjs' : process.argv.includes('--lookups') ? 'scripts/test-lookups-ui.cjs' : 'scripts/test-products-ui.cjs';
 const child = spawn(electron, [entry, ...(process.argv.includes('--dev') ? ['--dev'] : [])], { stdio: 'inherit', env });
