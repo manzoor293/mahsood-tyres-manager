@@ -5,8 +5,9 @@ import { catalogApi, catalogRequest } from '../../utils/catalog.js';
 const pageSize = 25;
 
 export default function LookupManagerDialog({ resource, onClose, onChanged }) {
-  const singular = resource === 'brands' ? 'Brand' : 'Category';
-  const plural = resource === 'brands' ? 'Brands' : 'Categories';
+  const expense = resource === 'expenseCategories';
+  const singular = expense ? 'Expense Category' : resource === 'brands' ? 'Brand' : 'Category';
+  const plural = expense ? 'Expense Categories' : resource === 'brands' ? 'Brands' : 'Categories';
   const [status, setStatus] = useState('all');
   const [page, setPage] = useState(0);
   const [revision, setRevision] = useState(0);
@@ -65,7 +66,7 @@ export default function LookupManagerDialog({ resource, onClose, onChanged }) {
     try {
       await catalogRequest(() => catalogApi()[resource].deactivate(confirmation.id));
       setConfirmation(null);
-      changed(`${singular} deactivated. Existing product links are preserved.`);
+      changed(`${singular} deactivated. Existing ${expense ? 'expense' : 'product'} links are preserved.`);
     } catch (failure) { setConfirmationError(failure.message); }
     finally { setBusy(false); }
   }
@@ -74,7 +75,7 @@ export default function LookupManagerDialog({ resource, onClose, onChanged }) {
       <Dialog open fullWidth maxWidth="sm" onClose={() => { if (!busy && !confirmation) onClose(); }} aria-labelledby="lookup-manager-title">
         <DialogTitle id="lookup-manager-title">Manage {plural}</DialogTitle>
         <DialogContent dividers>
-          <p className="mb-4 text-sm text-slate-500">Keep your product {resource === 'brands' ? 'brands' : 'categories'} organized. Deactivated entries remain linked to existing products.</p>
+          <p className="mb-4 text-sm text-slate-500">Keep your {expense ? 'expense categories' : `product ${resource === 'brands' ? 'brands' : 'categories'}`} organized. Deactivated entries remain linked to existing {expense ? 'expenses' : 'products'}.</p>
           {success && <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccess('')}>{success}</Alert>}
           {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
           <form onSubmit={save} noValidate className="mb-5 rounded-xl border border-slate-200 p-4">
@@ -91,9 +92,9 @@ export default function LookupManagerDialog({ resource, onClose, onChanged }) {
             onChange={(event) => { setStatus(event.target.value); setPage(0); }} slotProps={{ select: { native: true } }}>
             <option value="all">All statuses</option><option value="active">Active</option><option value="inactive">Inactive</option>
           </TextField>
-          {list.loading ? <div className="flex min-h-32 items-center justify-center gap-3" role="status"><CircularProgress size={22} />Loading {resource}…</div>
+          {list.loading ? <div className="flex min-h-32 items-center justify-center gap-3" role="status"><CircularProgress size={22} />Loading {plural.toLowerCase()}…</div>
             : list.error ? <Alert severity="error" action={<Button color="inherit" onClick={() => setRevision((value) => value + 1)}>Retry list</Button>}>{list.error}</Alert>
-              : !list.rows.length ? <p role="status" className="py-8 text-center text-sm text-slate-500">No {resource} found. Add one above or change the status filter.</p>
+              : !list.rows.length ? <p role="status" className="py-8 text-center text-sm text-slate-500">No {plural.toLowerCase()} found. Add one above or change the status filter.</p>
                 : <TableContainer sx={{ maxHeight: 280 }}><Table size="small" stickyHeader aria-label={`${plural} list`}>
                   <TableHead><TableRow><TableCell>Name</TableCell><TableCell>Status</TableCell><TableCell align="right">Actions</TableCell></TableRow></TableHead>
                   <TableBody>{list.rows.map((row) => <TableRow key={row.id} data-lookup-id={row.id}>
@@ -116,7 +117,7 @@ export default function LookupManagerDialog({ resource, onClose, onChanged }) {
       </Dialog>
       <Dialog open={Boolean(confirmation)} fullWidth maxWidth="xs" onClose={() => { if (!busy) setConfirmation(null); }} aria-labelledby="lookup-confirm-title">
         <DialogTitle id="lookup-confirm-title">Deactivate {singular.toLowerCase()}?</DialogTitle>
-        <DialogContent><DialogContentText>Deactivate “{confirmation?.name}”? It will no longer be available for new product selections. Existing products and their history will be preserved.</DialogContentText>
+        <DialogContent><DialogContentText>Deactivate “{confirmation?.name}”? It will no longer be available for new {expense ? 'expense' : 'product'} selections. Existing {expense ? 'expenses' : 'products'} and their history will be preserved.</DialogContentText>
           {confirmationError && <Alert severity="error" sx={{ mt: 2 }}>{confirmationError}</Alert>}
         </DialogContent>
         <DialogActions><Button disabled={busy} onClick={() => setConfirmation(null)}>Cancel</Button><Button color="warning" variant="contained" disabled={busy} onClick={deactivate}>{busy ? 'Deactivating…' : `Deactivate ${singular}`}</Button></DialogActions>

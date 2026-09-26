@@ -6,6 +6,10 @@ const { getDatabasePath, openDatabase } = require('../electron/database/index.cj
 const { schemaVersion } = require('../electron/database/migrate.cjs');
 
 app.setName('Mahsood Tyre Manager');
+if (process.env.MAHSOOD_UI_TEST_DATA) {
+  app.setPath('userData', process.env.MAHSOOD_UI_TEST_DATA);
+  app.setPath('sessionData', process.env.MAHSOOD_UI_TEST_DATA);
+}
 
 const tables = [
   'brands', 'categories', 'products', 'suppliers', 'customers', 'purchases',
@@ -48,6 +52,8 @@ app.whenReady().then(() => {
   };
   try {
     const filename = getDatabasePath(app);
+    // Automated tests create only a temporary fixture; direct --db remains read-only against existing data.
+    if (process.env.MAHSOOD_UI_TEST_DATA) openDatabase(filename).close();
     console.log(`Database: ${filename}`);
     database = openDatabase(filename, { readonly: true });
     const existingTables = new Set(database.prepare("SELECT name FROM sqlite_schema WHERE type = 'table'").all().map((row) => row.name));

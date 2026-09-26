@@ -30,6 +30,8 @@ app.on('browser-window-created', (_event, window) => {
         suppliers: await window.api.suppliers.list({limit:1}),
         customers: await window.api.customers.list({limit:1}),
         sales: await window.api.sales.list({limit:1}),
+        expenses: await window.api.expenses.list({limit:1}),
+        expenseCategories: await window.api.expenseCategories.list({limit:1}),
         purchases: await window.api.purchases.list({limit:1}),
         inventory: await window.api.inventory.list({limit:1}),
         movements: await window.api.inventory.listMovements({limit:1})

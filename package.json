@@ -9,13 +9,13 @@
     "dev": "node scripts/dev.mjs",
     "build": "vite build",
     "start": "node scripts/start.mjs",
-    "test:db": "node scripts/start.mjs --db",
+    "test:db": "node scripts/test-products-ui.mjs --db",
     "test:products": "node scripts/start.mjs --catalog",
     "test:products:ui": "node scripts/test-products-ui.mjs",
     "test:lookups:ui": "node scripts/test-products-ui.mjs --lookups",
     "test:suppliers": "node scripts/start.mjs --suppliers",
     "test:suppliers:ui": "node scripts/test-products-ui.mjs --suppliers",
-    "test:electron": "node scripts/start.mjs --smoke",
+    "test:electron": "node scripts/test-products-ui.mjs --smoke",
     "test:electron:dev": "node scripts/dev.mjs --smoke",
     "test:purchases": "node scripts/test-products-ui.mjs --purchases-backend",
     "test:purchases:ui": "node scripts/test-products-ui.mjs --purchases",
@@ -24,7 +24,9 @@
     "test:customers": "node scripts/test-products-ui.mjs --customers-backend",
     "test:customers:ui": "node scripts/test-products-ui.mjs --customers",
     "test:sales": "node scripts/test-products-ui.mjs --sales-backend",
-    "test:sales:ui": "node scripts/test-products-ui.mjs --sales"
+    "test:sales:ui": "node scripts/test-products-ui.mjs --sales",
+    "test:expenses": "node scripts/test-products-ui.mjs --expenses-backend",
+    "test:expenses:ui": "node scripts/test-products-ui.mjs --expenses"
   },
   "engines": {
     "node": ">=22.12.0"

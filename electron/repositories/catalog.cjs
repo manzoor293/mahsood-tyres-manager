@@ -1,6 +1,6 @@
 // Table/column names below are internal constants; all caller values are bound.
 function createLookupRepository(database, table) {
-  if (!['brands', 'categories'].includes(table)) throw new Error('Unsupported lookup repository');
+  if (!['brands', 'categories', 'expense_categories'].includes(table)) throw new Error('Unsupported lookup repository');
   const get = database.prepare(`SELECT * FROM ${table} WHERE id = ?`);
   const insert = database.prepare(`INSERT INTO ${table}(name, updated_at) VALUES (?, ?)`);
   const update = database.prepare(`UPDATE ${table} SET name = ?, updated_at = ? WHERE id = ?`);

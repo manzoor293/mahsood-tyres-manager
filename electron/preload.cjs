@@ -4,6 +4,18 @@ contextBridge.exposeInMainWorld('desktop', { isElectron: true });
 
 // Channel selection stays in preload; no invoke/send/SQL API crosses the bridge.
 contextBridge.exposeInMainWorld('api', {
+  expenses: {
+    list: (filters) => ipcRenderer.invoke('expenses:list', filters),
+    getById: (id) => ipcRenderer.invoke('expenses:getById', id),
+    create: (data) => ipcRenderer.invoke('expenses:create', data),
+    update: (id, data) => ipcRenderer.invoke('expenses:update', id, data),
+  },
+  expenseCategories: {
+    list: (filters) => ipcRenderer.invoke('expenseCategories:list', filters),
+    create: (data) => ipcRenderer.invoke('expenseCategories:create', data),
+    update: (id, data) => ipcRenderer.invoke('expenseCategories:update', id, data),
+    deactivate: (id) => ipcRenderer.invoke('expenseCategories:deactivate', id),
+  },
   sales: {
     list: (filters) => ipcRenderer.invoke('sales:list', filters),
     getById: (id) => ipcRenderer.invoke('sales:getById', id),

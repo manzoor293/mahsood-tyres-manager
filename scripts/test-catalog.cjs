@@ -5,7 +5,7 @@ const os = require('node:os');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
 const { openDatabase } = require('../electron/database/index.cjs');
-const { migrate } = require('../electron/database/migrate.cjs');
+const { migrate, schemaVersion } = require('../electron/database/migrate.cjs');
 const { createCatalogServices } = require('../electron/services/catalog.cjs');
 const { registerCatalogIpc, createSenderGuard } = require('../electron/ipc/catalog.cjs');
 
@@ -24,7 +24,7 @@ app.whenReady().then(async () => {
     database.exec("PRAGMA user_version = 1; INSERT INTO brands(name) VALUES ('Legacy'); INSERT INTO categories(name) VALUES ('Legacy');");
     database.close();
     database = openDatabase(path.join(directory, 'catalog.sqlite3'));
-    assert.equal(database.pragma('user_version', { simple: true }), 2);
+    assert.equal(database.pragma('user_version', { simple: true }), schemaVersion);
     assert.equal(database.prepare('SELECT active FROM brands WHERE id=1').get().active, 1);
     assert.equal(database.prepare('SELECT updated_at = created_at AS same FROM categories WHERE id=1').get().same, 1);
     migrate(database);
