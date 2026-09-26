@@ -1,4 +1,8 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
+if (process.env.MAHSOOD_UI_TEST_DATA) {
+  app.setPath('userData', process.env.MAHSOOD_UI_TEST_DATA);
+  app.setPath('sessionData', process.env.MAHSOOD_UI_TEST_DATA);
+}
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');

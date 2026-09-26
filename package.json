@@ -10,10 +10,10 @@
     "build": "vite build",
     "start": "node scripts/start.mjs",
     "test:db": "node scripts/test-products-ui.mjs --db",
-    "test:products": "node scripts/start.mjs --catalog",
+    "test:products": "node scripts/test-products-ui.mjs --catalog-backend",
     "test:products:ui": "node scripts/test-products-ui.mjs",
     "test:lookups:ui": "node scripts/test-products-ui.mjs --lookups",
-    "test:suppliers": "node scripts/start.mjs --suppliers",
+    "test:suppliers": "node scripts/test-products-ui.mjs --suppliers-backend",
     "test:suppliers:ui": "node scripts/test-products-ui.mjs --suppliers",
     "test:electron": "node scripts/test-products-ui.mjs --smoke",
     "test:electron:dev": "node scripts/dev.mjs --smoke",
@@ -26,7 +26,9 @@
     "test:sales": "node scripts/test-products-ui.mjs --sales-backend",
     "test:sales:ui": "node scripts/test-products-ui.mjs --sales",
     "test:expenses": "node scripts/test-products-ui.mjs --expenses-backend",
-    "test:expenses:ui": "node scripts/test-products-ui.mjs --expenses"
+    "test:expenses:ui": "node scripts/test-products-ui.mjs --expenses",
+    "test:dashboard": "node scripts/test-products-ui.mjs --dashboard-backend",
+    "test:dashboard:ui": "node scripts/test-products-ui.mjs --dashboard"
   },
   "engines": {
     "node": ">=22.12.0"

@@ -158,6 +158,37 @@ Purchases uses the original schema-2 financial tables; current application schem
 
 Run `npm run test:purchases` and, after `npm run build`, `npm run test:purchases:ui`. Both use temporary databases and userData directories removed by the parent runner after Electron exits. Backend tests include failures on the second stock movement and on payment insertion, verifying all five affected tables are unchanged. UI tests drive actual React controls through preload/IPC, including validation, duplicate prevention, repeated-submit protection, filters, details and retry states. Electron smoke checks also exercise the purchases list API.
 
+## Dashboard analytics
+
+The Dashboard reads persisted data through `window.api.dashboard.getOverview(filters?)`, using the existing `{ok,data}` / `{ok:false,error}` envelope. This is the only Dashboard bridge method. It validates the sender and a plain filter object, then runs aggregated repository queries in a deferred read transaction so all panels share one database snapshot. No SQL, database handle, or mutation API is exposed to React.
+
+Filters accept `period: 'today' | 'week' | 'month' | 'year' | 'custom'` (default `month`). Week means today plus the previous six days; month/year mean their first day through today. Custom requires `from_date` and `to_date` in YYYY-MM-DD format, both inclusive, with a maximum ten-year span. Calendar dates use the main process's local timezone, displayed above the cards. UTC timestamps are filtered against local-midnight boundaries converted to UTC, with an exclusive next-day endpoint; date-only purchases and expenses retain their literal local business date. Legacy UTC purchase/expense/payment timestamps are supported too. These Dashboard local-date rules do not change existing module filters.
+
+| Metric | Definition and source |
+| --- | --- |
+| Sales Revenue / invoice count | Sum of `sales.total` after invoice discounts / count of sales in the selected period |
+| Amount Received | Sum of `customer_payments.amount` with a linked sale, filtered by payment date rather than invoice date |
+| Purchases / purchase count | Sum of `purchases.total` after discounts / count of purchases in the selected period |
+| Supplier amount paid | Sum of `supplier_payments.amount` with a linked purchase, filtered by payment date |
+| Expenses | Sum of `expenses.amount` in the selected period |
+| Customer Receivables | All recorded sales totals minus all linked customer payments, including unpaid walk-in sales |
+| Supplier Payables | All recorded purchase totals minus all linked supplier payments |
+| Gross Profit | Selected sales revenue minus `SUM(sale_items.quantity * sale_items.unit_cost)`, using the cost captured at sale time |
+| Stock Units / active products | Sum of current `inventory.quantity` / count of active products, excluding inactive inventory |
+| Low / out of stock | Shared Inventory projection: positive quantity at or below `minimum_stock` / zero quantity; the counts are disjoint |
+
+Balances are current across all stored dates, not balances as of the selected period. Unlinked payments do not offset invoice balances. Zero historical cost cannot be distinguished from the Sales module's unknown-cost fallback, so every zero-cost sale item is conservatively counted in `unknownCostItemCount` (item rows, not units). If any exist, `grossProfit` is `null` and the UI displays **Incomplete**, an explanatory warning and the count instead of an inflated amount. Current product prices and subsequent purchase costs never recalculate historical profit. This is gross profit based on recorded historical costs, not formal net profit; purchase-discount allocation and formal accounting valuation are not introduced.
+
+The response includes `range`, `summary`, `salesTrend`, `topProducts`, `stockAlerts` and `recentActivity`. Trends include every local day (or month for ranges longer than 92 elapsed days), including zero-sales buckets. An SVG chart and expandable values table need no chart dependency. Sales vs Expenses is explicitly a comparison, not profit. Top products are the top five by historical units sold, with historical item revenue **before invoice discounts**; descriptions/brand/SKU/size come from the current catalog because historical descriptions are not stored. Stock alerts show at most ten active products, out-of-stock first, with a link to Inventory. Activity shows the latest ten sales, purchases, expenses and manual/opening stock movements in the selected period, ordered by local business date/time and stable type/ID ties. Date-only records sort at local midnight and display no invented time.
+
+Money remains integer paise; SQLite aggregates are read as exact BigInts and checked before conversion to safe JavaScript integers. Unsafe totals fail explicitly instead of silently rounding. The existing date, item-link and payment-link indexes are reused; schema remains **3**, with no migrations or additional indexes. Only the shared Inventory SQL projection was exported, without changing its stock rules.
+
+UI files are `src/pages/DashboardPage.jsx` and `src/components/dashboard/{DashboardSummary,DashboardTrend,DashboardDetails}.jsx`. They provide loading, empty, error/retry, refresh, custom range validation, accessible chart values and narrow-window table scrolling. Backend files are `electron/{repositories,services,ipc}/dashboard.cjs`, wired through the existing main/preload modules and router.
+
+Run `npm run test:dashboard`, then `npm run build` and `npm run test:dashboard:ui`. Tests use deterministic fixtures in isolated temporary databases/profiles, never shop data. They cover known arithmetic, discounts, partial payments, current balances/stock, historical and unknown costs, local-midnight/legacy date boundaries, zero-filled daily/monthly trends, ranking/order, read-only operation, safe integer overflow, validation and the real UI/preload/IPC path. Screenshots are saved to ignored `artifacts/dashboard-ui.png` and `artifacts/dashboard-narrow.png`. Both Electron smoke checks also call the Dashboard API.
+
+Reports, PDF/export/printing, later payment collection, returns, forecasts, formal accounting statements, payroll, cloud sync and backup/restore remain deferred.
+
 ## Catalog backend API
 
 `electron/repositories/catalog.cjs` contains parameterized SQL. `electron/services/catalog.cjs` handles validation and write transactions, using `services/validation.cjs`. `electron/ipc/catalog.cjs` registers only the catalog methods; SQL and database handles never cross the preload bridge.

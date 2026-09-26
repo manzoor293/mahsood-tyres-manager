@@ -25,6 +25,7 @@ app.on('browser-window-created', (_event, window) => {
       require('./verify-database.cjs').verifyDatabase(app);
       const catalog = await window.webContents.executeJavaScript(`(async () => ({
         brands: await window.api.brands.list({limit:1}),
+        dashboard: await window.api.dashboard.getOverview(),
         categories: await window.api.categories.list({limit:1}),
         products: await window.api.products.list({limit:1}),
         suppliers: await window.api.suppliers.list({limit:1}),
@@ -88,9 +89,13 @@ app.on('browser-window-created', (_event, window) => {
       await waitForPage('Settings');
       await window.webContents.executeJavaScript('location.hash = "/unknown-route"');
       await waitForPage('Dashboard');
+      for (let attempt = 0; attempt < 100; attempt += 1) {
+        if (await window.webContents.executeJavaScript('Boolean(document.querySelector("[data-metric]"))')) break;
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      }
       const styles = await window.webContents.executeJavaScript(`({
         sidebar: getComputedStyle(document.querySelector('aside')).display,
-        surface: getComputedStyle(document.querySelector('.MuiPaper-root')).backgroundColor,
+        surface: getComputedStyle(document.querySelector('[data-metric]')).backgroundColor,
         overflow: document.documentElement.scrollWidth > innerWidth
       })`);
       assert.equal(styles.sidebar, 'flex');

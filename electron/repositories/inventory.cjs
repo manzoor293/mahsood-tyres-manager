@@ -1,9 +1,9 @@
-function createInventoryRepository(db) {
-  const stock = `SELECT p.id AS product_id,p.sku,p.model,p.size,p.brand_id,p.category_id,p.active,
+const stock = `SELECT p.id AS product_id,p.sku,p.model,p.size,p.brand_id,p.category_id,p.active,
     p.minimum_stock,p.default_selling_price,b.name AS brand_name,c.name AS category_name,i.quantity,
     CASE WHEN i.quantity=0 THEN 'out' WHEN i.quantity<=p.minimum_stock THEN 'low' ELSE 'in' END AS stock_status
     FROM inventory i JOIN products p ON p.id=i.product_id
     LEFT JOIN brands b ON b.id=p.brand_id LEFT JOIN categories c ON c.id=p.category_id`;
+function createInventoryRepository(db) {
   const search = `(@search='' OR instr(lower(sku),lower(@search))>0 OR instr(lower(model),lower(@search))>0
     OR instr(lower(size),lower(@search))>0 OR instr(lower(coalesce(brand_name,'')),lower(@search))>0)`;
   const filters = `${search} AND (@active IS NULL OR active=@active)
@@ -39,4 +39,4 @@ function createInventoryRepository(db) {
     insert: (data) => insert.run(data).lastInsertRowid,
   };
 }
-module.exports = { createInventoryRepository };
+module.exports = { createInventoryRepository, stock };
