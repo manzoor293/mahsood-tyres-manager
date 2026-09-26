@@ -1,0 +1,32 @@
+const money=(key,label)=>({key,label,type:'money'});
+const number=(key,label)=>({key,label,type:'number'});
+const text=(key,label)=>({key,label});
+const date=(key,label='Date')=>({key,label,type:'date'});
+const invoices=[text('invoice_number','Invoice'),text('contact_name','Customer'),date('sold_at'),number('item_count','Items'),money('subtotal','Subtotal'),money('discount','Discount'),money('total','Total'),money('paid_amount','Received'),money('balance','Balance'),text('payment_method','Payment method'),text('payment_status','Status')];
+const invoiceTotals=[number('rowCount','Invoices'),money('total','Revenue'),money('paid','Received on invoices'),money('outstanding','Outstanding')];
+const accountColumns=[text('contact_name','Account'),text('phone','Phone'),number('invoiceCount','Open invoices'),money('total','Open invoice totals'),money('paid','Paid on open invoices'),money('outstanding','Outstanding')];
+const accountTotals=[number('rowCount','Accounts'),number('invoiceCount','Open invoices'),money('total','Open invoice totals'),money('paid','Paid on open invoices'),money('outstanding','Outstanding')];
+export const reports={
+  sales:{title:'Sales',method:'getSales',dated:true,fields:['search','customer_id','walk_in','payment_status','payment_method'],columns:invoices,summary:invoiceTotals,
+    note:'Sales dated in the selected period. Received and balance include all linked payments on these invoices, regardless of payment date. Dashboard Amount Received instead filters payments by their own date.'},
+  purchases:{title:'Purchases',method:'getPurchases',dated:true,fields:['search','supplier_id','payment_status'],columns:[text('invoice_number','Invoice'),date('purchased_at'),text('contact_name','Supplier'),number('item_count','Items'),money('subtotal','Subtotal'),money('discount','Discount'),money('total','Total'),money('paid_amount','Paid'),money('balance','Balance'),text('payment_status','Status')],summary:[number('rowCount','Invoices'),money('total','Purchase value'),money('paid','Paid on invoices'),money('outstanding','Outstanding')],
+    note:'Purchases dated in the selected period. Paid and balance include all payments linked to these invoices, regardless of payment date.'},
+  inventory:{title:'Inventory',method:'getInventory',fields:['search','brand_id','category_id','stock_status','active'],columns:[text('sku','SKU'),text('brand_name','Brand'),text('model','Product'),text('size','Size'),text('category_name','Category'),number('quantity','Stock units'),number('minimum_stock','Minimum'),text('stock_status','Stock status'),money('default_selling_price','Selling price'),{key:'active',label:'Product status',type:'active'}],summary:[number('rowCount','Products'),number('activeProducts','Active products'),number('stockUnits','Stock units'),number('lowStockCount','Low stock'),number('outOfStockCount','Out of stock')],
+    note:'Current inventory across all dates. Totals follow the selected filters, including active/inactive status. Low stock excludes zero stock. No inventory valuation is implied.'},
+  movements:{title:'Stock Movements',method:'getStockMovements',dated:true,fields:['product_id','movement_type'],columns:[date('created_at','Recorded at'),text('sku','SKU'),text('model','Product'),text('movement_type','Movement'),number('quantity_change','Quantity change'),text('reference_type','Reference type'),text('invoice_number','Invoice'),text('notes','Notes')],summary:[number('rowCount','Movements'),number('unitsIn','Units in'),number('unitsOut','Units out')],
+    note:'Actual stock ledger entries, filtered by their recorded time. This may differ from an invoice’s business date.'},
+  expenses:{title:'Expenses',method:'getExpenses',dated:true,fields:['search','expense_category_id','payment_method'],columns:[date('spent_at'),text('category_name','Category'),text('description','Description'),text('payment_method','Payment method'),money('amount','Amount')],summary:[number('rowCount','Expenses recorded'),money('expenses','Total expenses')],note:'Recorded shop expenses in the selected period, including historical inactive categories.'},
+  profit:{title:'Profit',method:'getProfit',dated:true,fields:[],columns:[text('invoice_number','Invoice'),date('sold_at'),text('contact_name','Customer'),money('subtotal','Item revenue'),money('discount','Invoice discount'),money('total','Revenue after discount'),money('historicalCost','Recorded historical cost'),number('unknownCostItemCount','Unknown-cost items'),money('grossProfit','Gross profit')],summary:[number('rowCount','Sales'),money('salesRevenue','Revenue after discount'),money('historicalCost','Recorded historical cost'),money('grossProfit','Gross Profit'),money('expenses','Period expenses'),money('operatingResult','Operating Result'),number('unknownCostItemCount','Unknown-cost items'),number('affectedSaleCount','Affected sales')],
+    note:'Invoice-level profit: each sale discount is deducted once; no line allocation or rounding. Historical item costs are retained. Operating Result = Gross Profit − period expenses; this is not formal net profit. Product descriptions reflect the current catalog.'},
+  receivables:{title:'Receivables',method:'getReceivables',fields:['search'],columns:accountColumns,summary:accountTotals,
+    note:'Current customer accounts with positive unpaid invoice balances, across all dates. Totals cover open invoices only. Fully paid invoices and walk-in sales are excluded. Unlinked payments do not offset invoices.'},
+  payables:{title:'Payables',method:'getPayables',fields:['search'],columns:accountColumns,summary:accountTotals,
+    note:'Current supplier accounts with positive unpaid invoice balances, across all dates. Totals cover open invoices only. Fully paid invoices are excluded. Unlinked payments do not offset invoices.'},
+};
+export function defaults(type) {
+  const config=reports[type];
+  return {...(config.dated?{period:'month'}:{}),...Object.fromEntries(config.fields.map((field)=>[field,field==='active'?'true':field==='walk_in'?false:['payment_status','payment_method','stock_status','movement_type'].includes(field)?'all':field.endsWith('_id')?null:'']))};
+}
+export function queryFilters(draft) {
+  return Object.fromEntries(Object.entries(draft).filter(([key,value])=>!(key.endsWith('_id')&&value===null)&&!(['from_date','to_date'].includes(key)&&draft.period!=='custom')).map(([key,value])=>[key,key.endsWith('_id')?value.id:key==='active'&&value!=='all'?value==='true':value]));
+}

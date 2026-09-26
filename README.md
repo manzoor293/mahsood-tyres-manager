@@ -30,7 +30,7 @@ This builds renderer assets, not an installer. Electron loads `dist/index.html` 
 - `src/components/`: reusable navigation, header, and local SVG icons.
 - `src/routes/`: route definitions and shared navigation metadata; unknown routes return to Dashboard.
 - `src/pages/ProductsPage.jsx`: Products / Tyres management interface using the existing catalog preload APIs.
-- `src/pages/PlaceholderPage.jsx`: shared placeholder for the remaining eight modules, without sample data or business actions.
+- `src/pages/PlaceholderPage.jsx`: placeholder for unfinished modules such as Settings, without sample data or business actions.
 - `src/styles.css`: Tailwind v4 import and base styles. Tailwind handles layout; Material UI uses its theme and `sx` for component styling.
 - `electron/main.cjs`: window lifecycle, local content loading, and security policy. Future privileged operations belong here.
 - `electron/preload.cjs`: isolated context bridge exposing `desktop.isElectron` and explicit `window.api` catalog methods. No generic IPC or Node API is exposed.
@@ -113,7 +113,7 @@ Historical `unit_cost` uses the latest **inserted** purchase item (`ORDER BY pur
 
 Payment methods are `Cash`, `Bank transfer` and `Cheque`. A positive initial paid amount creates one linked `customer_payments` record in the sale transaction, including for null-customer walk-in sales. Zero paid amount creates no payment record, so no payment method is stored for an unpaid sale. Balance is total minus summed linked payments. A walk-in sale can carry a balance, with an on-screen notice that no customer contact is attached. There is no customer credit/prepayment model.
 
-Sales uses the original schema-2 financial tables; current application schema is **3** for expense-category status. Sale returns, deletion, post-completion item edits, subsequent payments, statements, PDF/printing, expenses, dashboard statistics, reports and advanced accounting remain deferred. Run `npm run test:sales` and, after building, `npm run test:sales:ui`; both use temporary databases/profiles. Tests cover historical values, full/partial/walk-in/customer sales, concurrent stock changes via a separate connection, stock/payment rollback, invoice allocation, all three preload/IPC methods and the real POS workflow. Screenshots are saved under ignored `artifacts/`.
+Sales uses the original schema-2 financial tables; current application schema is **3** for expense-category status. Sale returns, deletion, post-completion item edits, subsequent payments, statements, PDF/printing and advanced accounting remain deferred; Expenses, Dashboard and Reports are implemented separately. Run `npm run test:sales` and, after building, `npm run test:sales:ui`; both use temporary databases/profiles. Tests cover historical values, full/partial/walk-in/customer sales, concurrent stock changes via a separate connection, stock/payment rollback, invoice allocation, all three preload/IPC methods and the real POS workflow. Screenshots are saved under ignored `artifacts/`.
 
 ## Customers
 
@@ -158,6 +158,41 @@ Purchases uses the original schema-2 financial tables; current application schem
 
 Run `npm run test:purchases` and, after `npm run build`, `npm run test:purchases:ui`. Both use temporary databases and userData directories removed by the parent runner after Electron exits. Backend tests include failures on the second stock movement and on payment insertion, verifying all five affected tables are unchanged. UI tests drive actual React controls through preload/IPC, including validation, duplicate prevention, repeated-submit protection, filters, details and retry states. Electron smoke checks also exercise the purchases list API.
 
+## Reports
+
+Reports provides eight read-only views of persisted data: Sales, Purchases, Inventory, Stock Movements, Expenses, Profit, Customer Receivables and Supplier Payables. Select one report, edit its filters, then choose **Apply filters**. **Reset filters** restores its defaults; **Refresh** reruns the applied filters. No record creation, editing, deletion, payment collection, export or printing actions are exposed. Sales and Profit rows can open the existing read-only internal sale-item view, including historical unit prices/costs; it is explicitly not a customer receipt.
+
+The eight explicit `window.api.reports` methods are `getSales`, `getPurchases`, `getInventory`, `getStockMovements`, `getExpenses`, `getProfit`, `getReceivables` and `getPayables`. Each accepts an optional plain filter object and returns the existing `{ok,data}` / `{ok:false,error}` envelope. Data contains `rows`, `summary`, `totalRows`, `limit`, `offset` and `range` (null for current-state reports). Main-process validation rejects unknown fields, invalid enums, dates, IDs and pagination values. All methods execute SQL reads within one deferred snapshot transaction; database handles and SQL are never exposed across preload.
+
+| Report | Filters beyond pagination | Data and totals |
+| --- | --- | --- |
+| Sales | Period, invoice `search`, `customer_id`, `walk_in`, `payment_status`, `payment_method` | Sales/items/customers and linked customer payments; invoice count, discounted revenue, received on invoices, outstanding |
+| Purchases | Period, invoice `search`, `supplier_id`, `payment_status` | Purchases/items/suppliers and linked supplier payments; invoice count, discounted purchase value, paid on invoices, outstanding |
+| Inventory | `search` (SKU/model/size), `brand_id`, `category_id`, `stock_status`, `active` | Shared Inventory projection and catalog lookups; matching products, active products, physical stock units, low/out counts |
+| Stock Movements | Period, `product_id`, `movement_type` | Actual ledger rows, products and linked purchase/sale invoices; entry count, units in and units out |
+| Expenses | Period, `expense_category_id`, `payment_method`, `search` (description/category) | Expenses/categories; count and total amount |
+| Profit | Period | Sale headers and historical sale-item costs, plus period expenses; discounted revenue, cost, gross profit, expenses, operating result and unknown-cost diagnostics |
+| Receivables | `search` (customer name/phone) | Named customers' positive open sale balances; account/open-invoice counts, open invoice totals, paid on those invoices and outstanding |
+| Payables | `search` (supplier name/phone) | Suppliers' positive open purchase balances; account/open-invoice counts, open invoice totals, paid on those invoices and outstanding |
+
+Pagination defaults to 25 rows, with backend `limit` from 1 to 100 and nonnegative `offset`. SQL computes totals over the **complete filtered dataset before pagination**, even when the requested page has no rows. Each UI page has 25 rows. Ordering is stable: transactions by local date/time then ID; inventory by SKU then product ID; accounts by outstanding descending then name/ID. Detail tables scroll inside the page at narrow window sizes.
+
+Transaction periods use the **same** normalization and SQL predicates as Dashboard: `period` is `today`, `week` (today plus previous six days), `month`, `year` (month/year to date) or `custom`. Custom requires inclusive `from_date` / `to_date` (YYYY-MM-DD), with the existing ten-year bound. UTC timestamps are compared against local-midnight UTC boundaries; literal date-only records remain local dates. Stock movements filter their recorded timestamps, not a linked invoice's business date. Inventory and account reports are current-state/all-date views and reject date filters. Inventory defaults to active products; its totals follow all selected filters, including inactive/all status. No stock valuation is inferred.
+
+**Payment scopes:** Sales/Purchases select invoices by invoice date, then sum **all linked payments** for those invoices. Their balance is invoice total minus linked payments. A payment-method filter selects sales having a matching payment, but paid totals still include all methods on those selected invoices. Exact recorded method strings are supported, including legacy methods. Dashboard's Amount Received/Supplier Amount Paid instead select linked payments by payment date; these are intentionally different questions and the report UI explains the distinction.
+
+**Profit:** revenue = sum of discounted `sales.total`; historical cost = sum of `sale_items.quantity * unit_cost`; Gross Profit = revenue minus historical cost; Operating Result = Gross Profit minus expenses in the same period. Profit rows are entire invoices, so each invoice discount is deducted exactly once and no allocation or rounding across lines is necessary. No product/customer filtering is offered on Profit that could make full invoice discounts or shop expenses incorrectly attributable to a subset. Current catalog prices/latest costs never recalculate historical results. Product/contact descriptions reflect current directory values, since historical descriptions are not stored. This is not formal net profit or an accounting valuation model.
+
+Every zero historical `unit_cost` is conservatively treated as potentially unknown, matching Dashboard. Summary diagnostics count affected item rows and affected invoices. If any exist, aggregate `grossProfit` and `operatingResult` are null and display **Incomplete**; affected invoice rows also withhold their gross profit. Known invoice rows may still show their own complete result. Recorded historical cost remains visible with an explicit incomplete warning. All authoritative money uses integer paise, SQLite integer aggregates, and checked BigInt subtraction/conversion; unsafe totals fail instead of silently rounding.
+
+**Accounts:** only invoices whose persisted total minus linked payments is positive are grouped into account rows. Fully paid invoices are excluded from open-invoice counts and monetary totals, and inactive contacts remain reportable. Walk-in sales are excluded from customer accounts; their total open balance is shown separately as `excludedWalkInBalance` across all dates, independent of customer search. Dashboard retains its existing all-sale balance including walk-ins. Unlinked payments are not allocated to invoices or silently subtracted. No collection or allocation workflow is introduced.
+
+Shared code extracted from Dashboard is in `electron/utils/analytics.cjs` (date normalization, safe integer conversion, profit arithmetic) and `electron/repositories/analytics.cjs` (date predicates, historical cost/unknown-cost aggregation and linked payment sums). Dashboard keeps its public API and date/profit behavior. Reports uses `electron/{repositories,services,ipc}/reports.cjs`, `src/pages/ReportsPage.jsx` and the four files under `src/components/reports/`. Main/preload, routing, the isolated test runner and smoke checks are wired accordingly. Existing date/item/payment-link indexes are retained; no migration or index was added. Schema remains **3**.
+
+Run `npm run test:reports`, then `npm run build` and `npm run test:reports:ui`. Deterministic fixture databases and Electron profiles are created in temporary directories, never in shop data. Backend tests cover all eight reports, full-filter totals across pages, payment scopes, local boundary dates, historical discounted profit, unknown costs, integer overflow, accounts, validation, read-only persistence and IPC guards. UI tests exercise all eight real renderer/preload/IPC methods, filters/lookups/dates, pagination, internal item inspection, warnings, empty/loading/error/retry and narrow layout. Screenshots are saved to ignored `artifacts/reports-ui.png` and `artifacts/reports-narrow.png`. Regression checks include Dashboard and both Electron modes.
+
+PDF/Excel/CSV exports, print layouts/receipts, subsequent payment collection, returns, forecasting, payroll, cloud synchronization, backup/restore and formal accounting statements remain deferred.
+
 ## Dashboard analytics
 
 The Dashboard reads persisted data through `window.api.dashboard.getOverview(filters?)`, using the existing `{ok,data}` / `{ok:false,error}` envelope. This is the only Dashboard bridge method. It validates the sender and a plain filter object, then runs aggregated repository queries in a deferred read transaction so all panels share one database snapshot. No SQL, database handle, or mutation API is exposed to React.
@@ -187,7 +222,7 @@ UI files are `src/pages/DashboardPage.jsx` and `src/components/dashboard/{Dashbo
 
 Run `npm run test:dashboard`, then `npm run build` and `npm run test:dashboard:ui`. Tests use deterministic fixtures in isolated temporary databases/profiles, never shop data. They cover known arithmetic, discounts, partial payments, current balances/stock, historical and unknown costs, local-midnight/legacy date boundaries, zero-filled daily/monthly trends, ranking/order, read-only operation, safe integer overflow, validation and the real UI/preload/IPC path. Screenshots are saved to ignored `artifacts/dashboard-ui.png` and `artifacts/dashboard-narrow.png`. Both Electron smoke checks also call the Dashboard API.
 
-Reports, PDF/export/printing, later payment collection, returns, forecasts, formal accounting statements, payroll, cloud sync and backup/restore remain deferred.
+PDF/export/printing, later payment collection, returns, forecasts, formal accounting statements, payroll, cloud sync and backup/restore remain deferred.
 
 ## Catalog backend API
 

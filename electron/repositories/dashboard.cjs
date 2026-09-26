@@ -1,12 +1,6 @@
 const { stock } = require('./inventory.cjs');
 
-// Date-only business records stay local; UTC timestamps use local-midnight UTC bounds.
-// Keep bare date columns in the range predicates so existing date indexes remain usable.
-function within(column) {
-  return `((length(${column})=10 AND ${column}>=@from AND ${column}<@until)
-    OR (length(${column})>10 AND ${column}>=@start AND ${column}<@end))`;
-}
-const localDate = (column) => `CASE WHEN length(${column})=10 THEN ${column} ELSE date(${column},'localtime') END`;
+const {within,localDate,historicalCost,unknownCosts,paymentTotal}=require('./analytics.cjs');
 function createDashboardRepository(db) {
   const one = (sql) => db.prepare(sql).safeIntegers();
   const sales = one(`SELECT COUNT(*) AS saleCount,COALESCE(SUM(total),0) AS salesRevenue FROM sales WHERE ${within('sold_at')}`);
@@ -15,10 +9,10 @@ function createDashboardRepository(db) {
   const received = one(`SELECT COALESCE(SUM(amount),0) AS amountReceived FROM customer_payments WHERE sale_id IS NOT NULL AND ${within('paid_at')}`);
   const paid = one(`SELECT COALESCE(SUM(amount),0) AS supplierAmountPaid FROM supplier_payments WHERE purchase_id IS NOT NULL AND ${within('paid_at')}`);
   const balances = one(`SELECT
-    (SELECT COALESCE(SUM(total),0) FROM sales)-(SELECT COALESCE(SUM(amount),0) FROM customer_payments WHERE sale_id IS NOT NULL) AS customerReceivables,
-    (SELECT COALESCE(SUM(total),0) FROM purchases)-(SELECT COALESCE(SUM(amount),0) FROM supplier_payments WHERE purchase_id IS NOT NULL) AS supplierPayables`);
-  const cost = one(`SELECT COALESCE(SUM(i.quantity*i.unit_cost),0) AS historicalCost,
-    COALESCE(SUM(CASE WHEN i.unit_cost=0 THEN 1 ELSE 0 END),0) AS unknownCostItemCount
+    (SELECT COALESCE(SUM(total-${paymentTotal('customer_payments','sale_id','s.id')}),0) FROM sales s) AS customerReceivables,
+    (SELECT COALESCE(SUM(total-${paymentTotal('supplier_payments','purchase_id','p.id')}),0) FROM purchases p) AS supplierPayables`);
+  const cost = one(`SELECT ${historicalCost} AS historicalCost,
+    ${unknownCosts} AS unknownCostItemCount
     FROM sales s JOIN sale_items i ON i.sale_id=s.id WHERE ${within('s.sold_at')}`);
   const inventory = one(`SELECT COUNT(*) AS activeProducts,COALESCE(SUM(quantity),0) AS stockUnits,
     COALESCE(SUM(stock_status='low'),0) AS lowStockCount,COALESCE(SUM(stock_status='out'),0) AS outOfStockCount
