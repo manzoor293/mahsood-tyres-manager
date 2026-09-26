@@ -1,0 +1,35 @@
+@page { size: A4 portrait; margin: 12mm; }
+* { box-sizing: border-box; }
+html, body { margin: 0; background: #fff; color: #000; font-family: Arial, sans-serif; font-size: 13px; line-height: 1.45; }
+.document { width: 100%; max-width: 210mm; padding: 12mm; margin: auto; }
+header { border-bottom: 2px solid #000; padding-bottom: 14px; margin-bottom: 18px; }
+h1 { font-size: 24px; margin: 0 0 4px; overflow-wrap: anywhere; }
+h2 { font-size: 19px; margin: 18px 0 8px; }
+h3 { font-size: 14px; margin: 14px 0 6px; }
+p { margin: 4px 0; overflow-wrap: anywhere; white-space: pre-wrap; }
+.meta { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-bottom: 18px; }
+.label { font-weight: bold; }
+table { width: 100%; border-collapse: collapse; table-layout: fixed; margin: 12px 0; }
+th, td { border: 1px solid #555; padding: 7px; text-align: left; vertical-align: top; overflow-wrap: anywhere; }
+th { font-weight: bold; }
+thead { display: table-header-group; }
+tr { break-inside: avoid; page-break-inside: avoid; }
+.money { text-align: right; font-variant-numeric: tabular-nums; }
+.quantity { text-align: right; }
+.totals { margin: 14px 0 14px auto; max-width: 110mm; break-inside: avoid; page-break-inside: avoid; }
+.totals dl { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr); gap: 6px 12px; }
+dt, dd { margin: 0; overflow-wrap: anywhere; }
+dd { text-align: right; font-weight: bold; font-variant-numeric: tabular-nums; }
+.current { border-top: 1px solid #555; margin-top: 18px; padding-top: 8px; }
+.explanation, footer { font-size: 11px; }
+footer { border-top: 1px solid #555; padding-top: 10px; margin-top: 22px; }
+@media screen and (max-width: 600px) {
+  .document { padding: 12px; }
+  .meta { grid-template-columns: 1fr; gap: 8px; }
+  th, td { padding: 4px; font-size: 11px; }
+  h1 { font-size: 21px; }
+}
+@media print {
+  .document { max-width: none; padding: 0; }
+  h2, h3 { break-after: avoid; page-break-after: avoid; }
+}

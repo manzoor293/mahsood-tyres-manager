@@ -38,7 +38,9 @@
     "test:sale-returns": "node scripts/test-products-ui.mjs --sale-returns-backend",
     "test:sale-returns:ui": "node scripts/test-products-ui.mjs --sale-returns",
     "test:purchase-returns": "node scripts/test-products-ui.mjs --purchase-returns-backend",
-    "test:purchase-returns:ui": "node scripts/test-products-ui.mjs --purchase-returns"
+    "test:purchase-returns:ui": "node scripts/test-products-ui.mjs --purchase-returns",
+    "test:printing": "node scripts/test-products-ui.mjs --printing-backend",
+    "test:printing:ui": "node scripts/test-products-ui.mjs --printing"
   },
   "engines": {
     "node": ">=22.12.0"

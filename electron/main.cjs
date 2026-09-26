@@ -1,4 +1,7 @@
 const { app, BrowserWindow, session, ipcMain } = require('electron');
+const {createPrintingService}=require('./services/printing.cjs');
+const {createPrintDriver}=require('./printing/driver.cjs');
+const {registerPrintingIpc}=require('./ipc/printing.cjs');
 const {createReturnServices}=require('./services/returns.cjs');
 const {registerReturnIpc}=require('./ipc/returns.cjs');
 const path = require('node:path');
@@ -78,6 +81,7 @@ function fail(error) {
 
 app.whenReady().then(async () => {
   const database = initializeDatabase(app);
+  registerPrintingIpc(ipcMain,createPrintingService(database,createPrintDriver()),createSenderGuard(allowedContents,rendererUrl));
   registerReturnIpc(ipcMain,createReturnServices(database),createSenderGuard(allowedContents,rendererUrl));
   registerPaymentIpc(ipcMain, createPaymentServices(database), createSenderGuard(allowedContents, rendererUrl));
   registerReportsIpc(ipcMain, createReportsService(database), createSenderGuard(allowedContents, rendererUrl));
