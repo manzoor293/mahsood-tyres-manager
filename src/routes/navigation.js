@@ -6,6 +6,7 @@ export const navigation = [
   { path: '/inventory', title: 'Inventory', icon: 'inventory', description: 'Current stock, movement history and stock adjustments.' },
   { path: '/sales', title: 'Sales / POS', icon: 'receipt', description: 'A dedicated space for sales and point of sale.' },
   { path: '/customers', title: 'Customers', icon: 'people', description: 'A dedicated space for your customer directory.' },
+  { path: '/payments', title: 'Payments', icon: 'wallet', description: 'Customer receipts, supplier payments and payment history.' },
   { path: '/expenses', title: 'Expenses', icon: 'wallet', description: 'A dedicated space for shop expenses.' },
   { path: '/reports', title: 'Reports', icon: 'chart', description: 'A dedicated space for business reports.' },
   { path: '/settings', title: 'Settings', icon: 'settings', description: 'A dedicated space for application preferences.' },

@@ -30,7 +30,11 @@
     "test:dashboard": "node scripts/test-products-ui.mjs --dashboard-backend",
     "test:dashboard:ui": "node scripts/test-products-ui.mjs --dashboard",
     "test:reports": "node scripts/test-products-ui.mjs --reports-backend",
-    "test:reports:ui": "node scripts/test-products-ui.mjs --reports"
+    "test:reports:ui": "node scripts/test-products-ui.mjs --reports",
+    "test:customer-payments": "node scripts/test-products-ui.mjs --customer-payments-backend",
+    "test:supplier-payments": "node scripts/test-products-ui.mjs --supplier-payments-backend",
+    "test:customer-payments:ui": "node scripts/test-products-ui.mjs --customer-payments",
+    "test:supplier-payments:ui": "node scripts/test-products-ui.mjs --supplier-payments"
   },
   "engines": {
     "node": ">=22.12.0"
