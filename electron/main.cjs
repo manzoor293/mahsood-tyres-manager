@@ -1,4 +1,6 @@
 const { app, BrowserWindow, session, ipcMain } = require('electron');
+const {createReturnServices}=require('./services/returns.cjs');
+const {registerReturnIpc}=require('./ipc/returns.cjs');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
 const { createCatalogServices } = require('./services/catalog.cjs');
@@ -76,6 +78,7 @@ function fail(error) {
 
 app.whenReady().then(async () => {
   const database = initializeDatabase(app);
+  registerReturnIpc(ipcMain,createReturnServices(database),createSenderGuard(allowedContents,rendererUrl));
   registerPaymentIpc(ipcMain, createPaymentServices(database), createSenderGuard(allowedContents, rendererUrl));
   registerReportsIpc(ipcMain, createReportsService(database), createSenderGuard(allowedContents, rendererUrl));
   registerDashboardIpc(ipcMain, createDashboardService(database), createSenderGuard(allowedContents, rendererUrl));

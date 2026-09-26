@@ -1,4 +1,4 @@
-const {paymentTotal,within,localTime}=require('./analytics.cjs');
+const {paymentTotal,within,localTime,returnTotal,withBalance}=require('./analytics.cjs');
 // Only these application-owned identifiers are used to construct SQL.
 const paymentKinds={
   customerPayments:{table:'customer_payments',invoices:'sales',contacts:'customers',contact:'customer_id',invoice:'sale_id',date:'sold_at'},
@@ -9,19 +9,19 @@ function createPaymentRepository(db,kind) {
   if(!c)throw new Error('Invalid payment repository kind');
   const prepare=(sql)=>db.prepare(sql).safeIntegers();
   const base=`SELECT i.id,i.invoice_number,i.${c.contact} AS contact_id,i.${c.date} AS invoice_date,i.total,
+    ${returnTotal(c.invoice.slice(0,-3),'i.id')} AS returned_value,i.total-${returnTotal(c.invoice.slice(0,-3),'i.id')} AS effective_total,
     a.name AS contact_name,a.phone,a.active,${paymentTotal(c.table,c.invoice,'i.id')} AS paid_amount
     FROM ${c.invoices} i LEFT JOIN ${c.contacts} a ON a.id=i.${c.contact}`;
-  const invoices=`SELECT *,total-paid_amount AS balance,
-    CASE WHEN paid_amount>=total THEN 'paid' WHEN paid_amount>0 THEN 'partial' ELSE 'unpaid' END AS payment_status FROM (${base})`;
+  const invoices=withBalance(base);
   const get=prepare(`SELECT * FROM (${invoices}) WHERE id=?`);
   const matching=`SELECT * FROM (${invoices}) WHERE contact_id IS NOT NULL AND balance>0
     AND (@contact_id IS NULL OR contact_id=@contact_id)
     AND (@search='' OR instr(lower(invoice_number||' '||contact_name||' '||COALESCE(phone,'')),lower(@search))>0)`;
   const rows=prepare(`${matching} ORDER BY ${localTime('invoice_date')} DESC,id DESC LIMIT @limit OFFSET @offset`);
-  const totals=prepare(`SELECT COUNT(*) AS totalRows,COALESCE(SUM(total),0) AS total,
+  const totals=prepare(`SELECT COUNT(*) AS totalRows,COALESCE(SUM(effective_total),0) AS total,
     COALESCE(SUM(paid_amount),0) AS paid,COALESCE(SUM(balance),0) AS outstanding FROM (${matching})`);
   const account=prepare(`SELECT a.id,a.name,a.phone,a.active,
-    COALESCE(SUM(i.total),0) AS total,COALESCE(SUM(i.paid_amount),0) AS paid,COALESCE(SUM(i.balance),0) AS outstanding,
+    COALESCE(SUM(i.effective_total),0) AS total,COALESCE(SUM(i.credit_due),0) AS credit_due,COALESCE(SUM(i.paid_amount),0) AS paid,COALESCE(SUM(i.balance),0) AS outstanding,
     COALESCE(SUM(i.balance>0),0) AS openInvoices
     FROM ${c.contacts} a LEFT JOIN (${invoices}) i ON i.contact_id=a.id WHERE a.id=? GROUP BY a.id`);
   const historySource=`SELECT p.id,p.${c.contact} AS contact_id,p.${c.invoice} AS invoice_id,p.amount,p.payment_method,p.paid_at,p.notes,p.reference,p.created_at,

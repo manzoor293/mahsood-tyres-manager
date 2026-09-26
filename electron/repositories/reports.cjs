@@ -1,7 +1,8 @@
 const {stock}=require('./inventory.cjs');
-const {within,localTime,paymentTotal,historicalCost,unknownCosts}=require('./analytics.cjs');
+const {within,localTime,paymentTotal,historicalCost,unknownCosts,returnTotal,withBalance}=require('./analytics.cjs');
 
 const saleFacts=`SELECT s.*,c.name AS contact_name,c.phone,
+  ${returnTotal('sale','s.id')} AS returned_value,s.total-${returnTotal('sale','s.id')} AS effective_total,
   (SELECT COUNT(*) FROM sale_items WHERE sale_id=s.id) AS item_count,
   ${paymentTotal('customer_payments','sale_id','s.id')} AS paid_amount,
   (SELECT group_concat(DISTINCT payment_method) FROM customer_payments WHERE sale_id=s.id) AS payment_method,
@@ -9,12 +10,11 @@ const saleFacts=`SELECT s.*,c.name AS contact_name,c.phone,
   (SELECT ${unknownCosts} FROM sale_items i WHERE i.sale_id=s.id) AS unknownCostItemCount
   FROM sales s LEFT JOIN customers c ON c.id=s.customer_id`;
 const purchaseFacts=`SELECT p.*,s.name AS contact_name,s.phone,
+  ${returnTotal('purchase','p.id')} AS returned_value,p.total-${returnTotal('purchase','p.id')} AS effective_total,
   (SELECT COUNT(*) FROM purchase_items WHERE purchase_id=p.id) AS item_count,
   ${paymentTotal('supplier_payments','purchase_id','p.id')} AS paid_amount
   FROM purchases p JOIN suppliers s ON s.id=p.supplier_id`;
-const withBalance=(sql)=>`SELECT *,total-paid_amount AS balance,
-  CASE WHEN paid_amount>=total THEN 'paid' WHEN paid_amount>0 THEN 'partial' ELSE 'unpaid' END AS payment_status FROM (${sql})`;
-const invoiceSummary=`COUNT(*) AS rowCount,COALESCE(SUM(total),0) AS total,
+const invoiceSummary=`COUNT(*) AS rowCount,COALESCE(SUM(effective_total),0) AS total,COALESCE(SUM(returned_value),0) AS returned_value,COALESCE(SUM(credit_due),0) AS credit_due,
   COALESCE(SUM(paid_amount),0) AS paid,COALESCE(SUM(balance),0) AS outstanding`;
 const movements=`SELECT m.*,p.sku,p.model,p.size,
   CASE WHEN m.purchase_item_id IS NOT NULL THEN 'Purchase' WHEN m.sale_item_id IS NOT NULL THEN 'Sale'
@@ -51,16 +51,16 @@ function createReportsRepository(db) {
     AND (@payment_method='all' OR payment_method=@payment_method)
     AND (@search='' OR instr(lower(description||' '||category_name),lower(@search))>0)`,
     `COUNT(*) AS rowCount,${sum('amount','expenses')}`,`${localTime('spent_at')} DESC,id DESC`);
-  const profit=report(saleFacts,within('sold_at'),`COUNT(*) AS rowCount,${sum('total','salesRevenue')},${sum('discount','discount')},
+  const profit=report(saleFacts,within('sold_at'),`COUNT(*) AS rowCount,${sum('effective_total','salesRevenue')},${sum('discount','discount')},
     ${sum('historicalCost')},${sum('unknownCostItemCount')},${sum('unknownCostItemCount>0','affectedSaleCount')}`,`${localTime('sold_at')} DESC,id DESC`);
   const periodExpenses=prepare(`SELECT ${sum('amount','expenses')} FROM expenses WHERE ${within('spent_at')}`);
   function accounts(source,contact) {
     // Aggregate only open invoices. Fully paid invoices cannot inflate open-invoice totals/counts.
     return report(`SELECT ${contact} AS id,contact_name,phone,COUNT(*) AS invoiceCount,
-      SUM(total) AS total,SUM(paid_amount) AS paid,SUM(balance) AS outstanding
-      FROM (${withBalance(source)}) WHERE ${contact} IS NOT NULL AND balance>0 GROUP BY ${contact}`,
+      SUM(effective_total) AS total,SUM(paid_amount) AS paid,SUM(balance) AS outstanding,SUM(credit_due) AS credit_due
+      FROM (${withBalance(source)}) WHERE ${contact} IS NOT NULL AND (balance>0 OR credit_due>0) GROUP BY ${contact}`,
       `(@search='' OR instr(lower(contact_name||' '||COALESCE(phone,'')),lower(@search))>0)`,
-      `COUNT(*) AS rowCount,${sum('invoiceCount')},${sum('total')},${sum('paid')},${sum('outstanding')}`,'outstanding DESC,contact_name COLLATE NOCASE,id');
+      `COUNT(*) AS rowCount,${sum('invoiceCount')},${sum('total')},${sum('paid')},${sum('outstanding')},${sum('credit_due')}`,'outstanding DESC,contact_name COLLATE NOCASE,id');
   }
   const receivables=accounts(saleFacts,'customer_id'),payables=accounts(purchaseFacts,'supplier_id');
   const walkIn=prepare(`SELECT ${sum('balance','excludedWalkInBalance')} FROM (${withBalance(saleFacts)}) WHERE customer_id IS NULL AND balance>0`);

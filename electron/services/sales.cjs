@@ -37,7 +37,7 @@ function createSaleService(db) {
         payment_status: data.payment_status ?? 'all', limit: v.integer(data.limit ?? 100,'limit',1,500), offset: v.integer(data.offset ?? 0,'offset'),
       };
       if (filters.walk_in && filters.customer_id) v.invalid('Choose a customer or walk-in, not both.');
-      if (!['all','paid','partial','unpaid'].includes(filters.payment_status)) v.invalid('Invalid payment status.');
+      if (!['all','paid','partial','unpaid','credit'].includes(filters.payment_status)) v.invalid('Invalid payment status.');
       if (filters.from_date && filters.to_date && filters.from_date > filters.to_date) v.invalid('From date must not follow To date.');
       return repository.list(filters);
     },

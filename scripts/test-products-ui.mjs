@@ -8,6 +8,8 @@ const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'mahsood-products-ui-'))
 const env = { ...process.env, MAHSOOD_UI_TEST_DATA: directory };
 delete env.ELECTRON_RUN_AS_NODE;
 const entry = process.argv.includes('--smoke') ? 'scripts/smoke.cjs'
+  : process.argv.some(arg=>/^--(sale|purchase)-returns-backend$/.test(arg)) ? 'scripts/test-returns.cjs'
+  : process.argv.some(arg=>/^--(sale|purchase)-returns$/.test(arg)) ? 'scripts/test-returns-ui.cjs'
   : process.argv.includes('--customer-payments-backend') || process.argv.includes('--supplier-payments-backend') ? 'scripts/test-payments.cjs'
   : process.argv.includes('--customer-payments') || process.argv.includes('--supplier-payments') ? 'scripts/test-payments-ui.cjs'
   : process.argv.includes('--reports-backend') ? 'scripts/test-reports.cjs'
@@ -26,7 +28,7 @@ const entry = process.argv.includes('--smoke') ? 'scripts/smoke.cjs'
   : process.argv.includes('--inventory-backend') ? 'scripts/test-inventory.cjs'
   : process.argv.includes('--inventory') ? 'scripts/test-inventory-ui.cjs'
   : process.argv.includes('--purchases-backend') ? 'scripts/test-purchases.cjs' : process.argv.includes('--purchases') ? 'scripts/test-purchases-ui.cjs' : process.argv.includes('--suppliers') ? 'scripts/test-suppliers-ui.cjs' : process.argv.includes('--lookups') ? 'scripts/test-lookups-ui.cjs' : 'scripts/test-products-ui.cjs';
-const child = spawn(electron, [entry, ...(process.argv.includes('--dev') ? ['--dev'] : []), ...(process.argv.some((arg)=>arg.startsWith('--supplier-payments')) ? ['--supplier-payments'] : [])], { stdio: 'inherit', env });
+const child = spawn(electron, [entry, ...(process.argv.some(arg=>arg.startsWith('--purchase-returns'))?['--purchase-returns']:[]), ...(process.argv.includes('--dev') ? ['--dev'] : []), ...(process.argv.some((arg)=>arg.startsWith('--supplier-payments')) ? ['--supplier-payments'] : [])], { stdio: 'inherit', env });
 let finished = false;
 function finish(code) {
   if (finished) return;

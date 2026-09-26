@@ -1,11 +1,12 @@
+const {returnTotal,withBalance}=require('./analytics.cjs');
 function createSaleRepository(db) {
   const summary = `SELECT s.*,c.name AS customer_name,c.phone AS customer_phone,c.address AS customer_address,
+    ${returnTotal('sale','s.id')} AS returned_value,s.total-${returnTotal('sale','s.id')} AS effective_total,
     (SELECT COUNT(*) FROM sale_items WHERE sale_id=s.id) AS item_count,
     COALESCE((SELECT SUM(amount) FROM customer_payments WHERE sale_id=s.id),0) AS paid_amount,
     (SELECT group_concat(payment_method, ', ') FROM customer_payments WHERE sale_id=s.id) AS payment_method
     FROM sales s LEFT JOIN customers c ON c.id=s.customer_id`;
-  const projection = `SELECT *,total-paid_amount AS balance,
-    CASE WHEN paid_amount>=total THEN 'paid' WHEN paid_amount>0 THEN 'partial' ELSE 'unpaid' END AS payment_status FROM (${summary})`;
+  const projection = withBalance(summary);
   const get = db.prepare(`${projection} WHERE id=?`);
   const items = db.prepare(`SELECT i.*,p.sku,p.model,p.size,i.quantity*i.unit_price AS line_total
     FROM sale_items i JOIN products p ON p.id=i.product_id WHERE sale_id=? ORDER BY i.id`);

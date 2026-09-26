@@ -164,7 +164,7 @@ export default function PurchasesPage() {
             onChange={(e) => filter("status", e.target.value)}
             slotProps={{ select: { native: true } }}
           >
-            {["all", "unpaid", "partial", "paid"].map((status) => (
+            {["all", "unpaid", "partial", "paid", "credit"].map((status) => (
               <option key={status} value={status}>
                 {status === "all" ? "All payments" : status}
               </option>

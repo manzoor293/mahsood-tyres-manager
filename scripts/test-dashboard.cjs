@@ -23,7 +23,7 @@ app.whenReady().then(()=>{
     const filters={period:'custom',from_date:'2026-09-01',to_date:'2026-09-30'};
     const snapshot=()=>db.serialize();const before=snapshot();
     const result=service.getOverview(filters),s=result.summary;
-    assert.deepEqual(s,{saleCount:1,salesRevenue:5900,purchaseCount:1,purchaseTotal:20000,expenses:303,amountReceived:2000,supplierAmountPaid:5000,customerReceivables:4400,supplierPayables:15000,historicalCost:4002,unknownCostItemCount:0,activeProducts:4,stockUnits:13,lowStockCount:2,outOfStockCount:1,grossProfit:1898});
+    assert.deepEqual(s,{saleCount:1,salesRevenue:5900,purchaseCount:1,purchaseTotal:20000,expenses:303,amountReceived:2000,supplierAmountPaid:5000,customerReceivables:4400,supplierPayables:15000,customerCreditDue:0,supplierCreditDue:0,historicalCost:4002,unknownCostItemCount:0,activeProducts:4,stockUnits:13,lowStockCount:2,outOfStockCount:1,grossProfit:1898});
     assert.equal(result.salesTrend.length,30);assert.deepEqual(result.salesTrend[1],{bucket:'2026-09-02',revenue:5900,count:1});
     assert.equal(result.salesTrend[0].revenue,0);assert.equal(result.salesTrend.at(-1).revenue,0);
     assert.deepEqual(result.topProducts.map((p)=>[p.sku,p.quantitySold,p.itemRevenue]),[['A',2,3002],['B',1,3000]]);
@@ -64,7 +64,7 @@ app.whenReady().then(()=>{
     const handlers=new Map();registerDashboardIpc({handle:(name,fn)=>handlers.set(name,fn)},service,(event)=>event.trusted);
     const handler=handlers.get('dashboard:getOverview');
     assert.equal(handler({trusted:false}).error.code,'FORBIDDEN');assert.equal(handler({trusted:true},{},{}).error.code,'VALIDATION');assert.equal(handler({trusted:true},{sql:'select 1'}).error.code,'VALIDATION');assert.equal(handler({trusted:true},filters).ok,true);
-    assert.equal(db.pragma('user_version',{simple:true}),3);assert.deepEqual(db.pragma('foreign_key_check'),[]);
+    assert.equal(db.pragma('user_version',{simple:true}),4);assert.deepEqual(db.pragma('foreign_key_check'),[]);
     db.close();db=openDatabase(filename,{readonly:true});service=createDashboardService(db,clock);assert.equal(service.getOverview(filters).summary.purchaseTotal,20019);
     db.close();db=openDatabase(filename);service=createDashboardService(db,clock);
     // More than JS-safe integer totals must fail explicitly rather than returning rounded money.

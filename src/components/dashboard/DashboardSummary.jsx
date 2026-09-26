@@ -3,13 +3,15 @@ import { formatPrice } from '../../utils/catalog.js';
 
 export default function DashboardSummary({ summary: s }) {
   const cards = [
-    ['Sales Revenue',formatPrice(s.salesRevenue),`${s.saleCount} invoices · after discounts`],
+    ['Sales Revenue',formatPrice(s.salesRevenue),`${s.saleCount} invoices · after discounts and all returns, including later returns`],
     ['Amount Received',formatPrice(s.amountReceived),'Linked customer payments in this period'],
     ['Gross Profit',s.grossProfit===null?'Incomplete':formatPrice(s.grossProfit),s.grossProfit===null?`${s.unknownCostItemCount} sale item(s) with unknown / zero cost`:'After discounts, less historical item cost'],
     ['Expenses',formatPrice(s.expenses),'Recorded shop spending in this period'],
     ['Purchases',formatPrice(s.purchaseTotal),`${s.purchaseCount} purchases · ${formatPrice(s.supplierAmountPaid)} paid in period`],
     ['Customer Receivables',formatPrice(s.customerReceivables),'Current · all dates, including walk-in balances'],
     ['Supplier Payables',formatPrice(s.supplierPayables),'Current · all dates'],
+    ['Customer Credit / Refund Due',formatPrice(s.customerCreditDue),'Current credits, including walk-in refunds; no payout recorded'],
+    ['Supplier Credit Due',formatPrice(s.supplierCreditDue),'Current supplier credits; no refund received'],
     ['Stock Units',s.stockUnits.toLocaleString(),`Current · ${s.activeProducts} active products`],
     ['Stock Alerts',`${s.lowStockCount} low / ${s.outOfStockCount} out`,'Current · active products; low excludes zero stock'],
   ];

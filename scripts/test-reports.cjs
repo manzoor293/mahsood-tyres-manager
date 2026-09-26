@@ -16,7 +16,7 @@ app.whenReady().then(()=>{
     const clock=()=>new Date('2026-09-26T12:00:00');let service=createReportsService(db,clock);
     for(const method of methods){const empty=service[method]();assert.deepEqual(empty.rows,[]);assert.equal(empty.totalRows,0);assert.ok(Object.values(empty.summary).every((value)=>value===0));}
     seedReports(db);const before=db.serialize();
-    const sales=service.getSales();assert.equal(sales.rows.length,25);assert.deepEqual(sales.summary,{rowCount:28,total:32927,paid:29027,outstanding:3900});
+    const sales=service.getSales();assert.equal(sales.rows.length,25);assert.deepEqual(sales.summary,{rowCount:28,total:32927,returned_value:0,credit_due:0,paid:29027,outstanding:3900});
     const second=service.getSales({offset:25});assert.equal(second.rows.length,3);assert.deepEqual(second.summary,sales.summary);assert.equal(new Set([...sales.rows,...second.rows].map((row)=>row.id)).size,28);
     assert.deepEqual(service.getSales({offset:100}).summary,sales.summary);
     assert.equal(service.getSales({search:'sale-open'}).rows[0].balance,3900);
@@ -26,7 +26,7 @@ app.whenReady().then(()=>{
     assert.equal(service.getSales({walk_in:true}).totalRows,0);assert.equal(service.getSales({search:"' OR 1=1 --"}).totalRows,0);
     const oct={period:'custom',from_date:'2026-10-01',to_date:'2026-10-31'};
     assert.equal(service.getSales({...oct,walk_in:true}).totalRows,1);
-    const purchases=service.getPurchases();assert.deepEqual(purchases.summary,{rowCount:1,total:110000,paid:5000,outstanding:105000});
+    const purchases=service.getPurchases();assert.deepEqual(purchases.summary,{rowCount:1,total:110000,returned_value:0,credit_due:0,paid:5000,outstanding:105000});
     assert.equal(service.getPurchases({supplier_id:2}).totalRows,0);assert.equal(service.getPurchases({...oct,payment_status:'paid',supplier_id:2}).summary.paid,9000);
     assert.equal(service.getPurchases({search:'PUR-OPEN',payment_status:'partial'}).totalRows,1);
     const inventory=service.getInventory();assert.deepEqual(inventory.summary,{rowCount:4,activeProducts:4,stockUnits:76,lowStockCount:2,outOfStockCount:1});
@@ -43,9 +43,9 @@ app.whenReady().then(()=>{
     assert.deepEqual(service.getProfit({offset:25}).summary,profit.summary);
     const unknown=service.getProfit(oct);assert.equal(unknown.summary.unknownCostItemCount,1);assert.equal(unknown.summary.affectedSaleCount,1);assert.equal(unknown.summary.grossProfit,null);assert.equal(unknown.summary.operatingResult,null);assert.equal(unknown.rows[0].grossProfit,null);
     const dashboard=createDashboardService(db,clock).getOverview();assert.equal(dashboard.summary.grossProfit,profit.summary.grossProfit);assert.equal(dashboard.summary.customerReceivables,4400);
-    const receivables=service.getReceivables();assert.deepEqual(receivables.summary,{rowCount:1,invoiceCount:1,total:5900,paid:2000,outstanding:3900,excludedWalkInBalance:500});
+    const receivables=service.getReceivables();assert.deepEqual(receivables.summary,{rowCount:1,invoiceCount:1,total:5900,paid:2000,outstanding:3900,credit_due:0,excludedWalkInBalance:500});
     assert.equal(receivables.rows[0].contact_name,'Customer One');assert.equal(service.getReceivables({search:'paid customer'}).totalRows,0);assert.equal(service.getReceivables({search:'333'}).totalRows,1);
-    assert.deepEqual(service.getPayables().summary,{rowCount:1,invoiceCount:1,total:110000,paid:5000,outstanding:105000});assert.equal(service.getPayables({search:'Supplier Two'}).totalRows,0);
+    assert.deepEqual(service.getPayables().summary,{rowCount:1,invoiceCount:1,total:110000,paid:5000,outstanding:105000,credit_due:0});assert.equal(service.getPayables({search:'Supplier Two'}).totalRows,0);
     assert.deepEqual(db.serialize(),before,'All eight report APIs must be read-only');
     // Invoice reports include subsequent linked payments; Dashboard cash totals follow paid_at instead.
     db.exec("INSERT INTO customer_payments(customer_id,sale_id,amount,payment_method,paid_at) VALUES (1,1,100,'Cheque','2026-10-04'),(1,NULL,500,'Cash','2026-10-04');");
@@ -62,7 +62,7 @@ app.whenReady().then(()=>{
     const handlers=new Map();const ipc={handle:(name,fn)=>handlers.set(name,fn),removeHandler:(name)=>handlers.delete(name)};
     const unregister=registerReportsIpc(ipc,service,(event)=>event.trusted);assert.equal(handlers.size,8);
     for(const handler of handlers.values()){assert.equal(handler({trusted:false}).error.code,'FORBIDDEN');assert.equal(handler({trusted:true},{},{}).error.code,'VALIDATION');assert.equal(handler({trusted:true},{sql:'bad'}).error.code,'VALIDATION');assert.equal(handler({trusted:true}).ok,true);}
-    unregister();assert.equal(handlers.size,0);assert.equal(db.pragma('user_version',{simple:true}),3);assert.deepEqual(db.pragma('foreign_key_check'),[]);
+    unregister();assert.equal(handlers.size,0);assert.equal(db.pragma('user_version',{simple:true}),4);assert.deepEqual(db.pragma('foreign_key_check'),[]);
     db.close();db=openDatabase(filename,{readonly:true});assert.equal(createReportsService(db,clock).getSales().totalRows,28);
     db.close();db=openDatabase(filename);const expenseBig=db.prepare("INSERT INTO expenses(expense_category_id,amount,description,payment_method,spent_at) VALUES (1,?,'Large','Cash','2026-09-01')");expenseBig.run(Number.MAX_SAFE_INTEGER);
     assert.throws(()=>createReportsService(db,clock).getExpenses(),(e)=>e.code==='RANGE');

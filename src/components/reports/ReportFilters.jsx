@@ -1,6 +1,6 @@
 import {Button,Checkbox,FormControlLabel,TextField} from '@mui/material';
 import ReportLookup from './ReportLookup.jsx';
-const options={payment_status:[['all','All statuses'],['paid','Paid'],['partial','Partial'],['unpaid','Unpaid']],stock_status:[['all','All stock'],['in','In stock'],['low','Low stock'],['out','Out of stock']],active:[['true','Active'],['false','Inactive'],['all','All products']],movement_type:['all','PURCHASE','SALE','ADJUSTMENT_IN','ADJUSTMENT_OUT','SALE_RETURN','PURCHASE_RETURN','OPENING_STOCK'].map((value)=>[value,value==='all'?'All movements':value.replaceAll('_',' ')])};
+const options={payment_status:[['all','All statuses'],['paid','Paid'],['partial','Partial'],['unpaid','Unpaid'],['credit','Credit / refund due']],stock_status:[['all','All stock'],['in','In stock'],['low','Low stock'],['out','Out of stock']],active:[['true','Active'],['false','Inactive'],['all','All products']],movement_type:['all','PURCHASE','SALE','ADJUSTMENT_IN','ADJUSTMENT_OUT','SALE_RETURN','PURCHASE_RETURN','OPENING_STOCK'].map((value)=>[value,value==='all'?'All movements':value.replaceAll('_',' ')])};
 const labels={payment_status:'Payment status',stock_status:'Stock status',active:'Product status',movement_type:'Movement type'};
 export default function ReportFilters({config,draft,setDraft,onApply,onReset,busy}) {
   const change=(key,value)=>setDraft((d)=>({...d,[key]:value,...(key==='customer_id'&&value?{walk_in:false}:{}),...(key==='walk_in'&&value?{customer_id:null}:{})}));

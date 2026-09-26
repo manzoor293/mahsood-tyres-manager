@@ -34,7 +34,11 @@
     "test:customer-payments": "node scripts/test-products-ui.mjs --customer-payments-backend",
     "test:supplier-payments": "node scripts/test-products-ui.mjs --supplier-payments-backend",
     "test:customer-payments:ui": "node scripts/test-products-ui.mjs --customer-payments",
-    "test:supplier-payments:ui": "node scripts/test-products-ui.mjs --supplier-payments"
+    "test:supplier-payments:ui": "node scripts/test-products-ui.mjs --supplier-payments",
+    "test:sale-returns": "node scripts/test-products-ui.mjs --sale-returns-backend",
+    "test:sale-returns:ui": "node scripts/test-products-ui.mjs --sale-returns",
+    "test:purchase-returns": "node scripts/test-products-ui.mjs --purchase-returns-backend",
+    "test:purchase-returns:ui": "node scripts/test-products-ui.mjs --purchase-returns"
   },
   "engines": {
     "node": ">=22.12.0"

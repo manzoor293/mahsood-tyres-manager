@@ -1,7 +1,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 
-const migrations = ['001-initial.sql', '002-catalog-status.sql', '003-expense-category-status.sql'];
+const migrations = ['001-initial.sql', '002-catalog-status.sql', '003-expense-category-status.sql', '004-returns.sql'];
 const schemaVersion = migrations.length;
 
 function migrate(database) {

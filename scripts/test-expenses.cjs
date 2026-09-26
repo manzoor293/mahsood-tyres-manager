@@ -23,7 +23,7 @@ app.whenReady().then(async()=>{
       INSERT INTO expenses(expense_category_id,amount,description,payment_method,spent_at) VALUES (1,1850050,'Existing record','CASH','2026-09-01T10:00:00.000Z');`);
     const legacy=db.prepare('SELECT * FROM expenses').get();
     db.close();db=openDatabase(filename);
-    assert.equal(db.pragma('user_version',{simple:true}),3);
+    assert.equal(db.pragma('user_version',{simple:true}),4);
     assert.deepEqual(db.prepare('SELECT * FROM expenses').get(),legacy);
     assert.equal(db.prepare('SELECT active FROM expense_categories').get().active,1);
     assert.equal(db.prepare('SELECT created_at=updated_at AS same FROM expense_categories').get().same,1);

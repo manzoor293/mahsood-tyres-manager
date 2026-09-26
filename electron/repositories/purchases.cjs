@@ -1,10 +1,11 @@
+const {returnTotal,withBalance}=require('./analytics.cjs');
 function createPurchaseRepository(db) {
   const summary = `SELECT p.*, s.name AS supplier_name,
+    ${returnTotal('purchase','p.id')} AS returned_value,p.total-${returnTotal('purchase','p.id')} AS effective_total,
     (SELECT COUNT(*) FROM purchase_items WHERE purchase_id=p.id) AS item_count,
     COALESCE((SELECT SUM(amount) FROM supplier_payments WHERE purchase_id=p.id),0) AS paid_amount
     FROM purchases p JOIN suppliers s ON s.id=p.supplier_id`;
-  const projection = `SELECT *, total-paid_amount AS balance,
-    CASE WHEN paid_amount>=total THEN 'paid' WHEN paid_amount>0 THEN 'partial' ELSE 'unpaid' END AS payment_status FROM (${summary})`;
+  const projection = withBalance(summary);
   const get = db.prepare(`${projection} WHERE id=?`);
   const items = db.prepare(`SELECT i.*, p.sku, p.model, p.size, i.quantity*i.unit_cost AS line_total
     FROM purchase_items i JOIN products p ON p.id=i.product_id WHERE purchase_id=? ORDER BY i.id`);

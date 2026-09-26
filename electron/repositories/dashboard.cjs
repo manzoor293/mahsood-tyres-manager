@@ -1,16 +1,18 @@
 const { stock } = require('./inventory.cjs');
 
-const {within,localDate,historicalCost,unknownCosts,paymentTotal}=require('./analytics.cjs');
+const {within,localDate,historicalCost,unknownCosts,paymentTotal,effectiveTotal,returnedQuantity}=require('./analytics.cjs');
 function createDashboardRepository(db) {
   const one = (sql) => db.prepare(sql).safeIntegers();
-  const sales = one(`SELECT COUNT(*) AS saleCount,COALESCE(SUM(total),0) AS salesRevenue FROM sales WHERE ${within('sold_at')}`);
-  const purchases = one(`SELECT COUNT(*) AS purchaseCount,COALESCE(SUM(total),0) AS purchaseTotal FROM purchases WHERE ${within('purchased_at')}`);
+  const sales = one(`SELECT COUNT(*) AS saleCount,COALESCE(SUM(${effectiveTotal('sale','sales.id','total')}),0) AS salesRevenue FROM sales WHERE ${within('sold_at')}`);
+  const purchases = one(`SELECT COUNT(*) AS purchaseCount,COALESCE(SUM(${effectiveTotal('purchase','purchases.id','total')}),0) AS purchaseTotal FROM purchases WHERE ${within('purchased_at')}`);
   const expenses = one(`SELECT COALESCE(SUM(amount),0) AS expenses FROM expenses WHERE ${within('spent_at')}`);
   const received = one(`SELECT COALESCE(SUM(amount),0) AS amountReceived FROM customer_payments WHERE sale_id IS NOT NULL AND ${within('paid_at')}`);
   const paid = one(`SELECT COALESCE(SUM(amount),0) AS supplierAmountPaid FROM supplier_payments WHERE purchase_id IS NOT NULL AND ${within('paid_at')}`);
   const balances = one(`SELECT
-    (SELECT COALESCE(SUM(total-${paymentTotal('customer_payments','sale_id','s.id')}),0) FROM sales s) AS customerReceivables,
-    (SELECT COALESCE(SUM(total-${paymentTotal('supplier_payments','purchase_id','p.id')}),0) FROM purchases p) AS supplierPayables`);
+    (SELECT COALESCE(SUM(MAX(${effectiveTotal('sale','s.id','total')}-${paymentTotal('customer_payments','sale_id','s.id')},0)),0) FROM sales s) AS customerReceivables,
+    (SELECT COALESCE(SUM(MAX(${effectiveTotal('purchase','p.id','total')}-${paymentTotal('supplier_payments','purchase_id','p.id')},0)),0) FROM purchases p) AS supplierPayables,
+    (SELECT COALESCE(SUM(MAX(${paymentTotal('customer_payments','sale_id','s.id')}-${effectiveTotal('sale','s.id','total')},0)),0) FROM sales s) AS customerCreditDue,
+    (SELECT COALESCE(SUM(MAX(${paymentTotal('supplier_payments','purchase_id','p.id')}-${effectiveTotal('purchase','p.id','total')},0)),0) FROM purchases p) AS supplierCreditDue`);
   const cost = one(`SELECT ${historicalCost} AS historicalCost,
     ${unknownCosts} AS unknownCostItemCount
     FROM sales s JOIN sale_items i ON i.sale_id=s.id WHERE ${within('s.sold_at')}`);
@@ -20,9 +22,9 @@ function createDashboardRepository(db) {
   const alerts = one(`SELECT * FROM (${stock}) WHERE active=1 AND stock_status IN ('low','out')
     ORDER BY CASE stock_status WHEN 'out' THEN 0 ELSE 1 END,sku COLLATE NOCASE,product_id LIMIT 10`);
   const trend = one(`SELECT substr(${localDate('sold_at')},1,@bucketLength) AS bucket,
-    SUM(total) AS revenue,COUNT(*) AS count FROM sales WHERE ${within('sold_at')} GROUP BY bucket ORDER BY bucket`);
+    SUM(${effectiveTotal('sale','sales.id','total')}) AS revenue,COUNT(*) AS count FROM sales WHERE ${within('sold_at')} GROUP BY bucket ORDER BY bucket`);
   const top = one(`SELECT p.id AS product_id,p.sku,p.model,p.size,b.name AS brand_name,
-    SUM(i.quantity) AS quantitySold,SUM(i.quantity*i.unit_price) AS itemRevenue
+    SUM(i.quantity-${returnedQuantity('sale','i.id')}) AS quantitySold,SUM((i.quantity-${returnedQuantity('sale','i.id')})*i.unit_price) AS itemRevenue
     FROM sales s JOIN sale_items i ON i.sale_id=s.id JOIN products p ON p.id=i.product_id
     LEFT JOIN brands b ON b.id=p.brand_id WHERE ${within('s.sold_at')}
     GROUP BY p.id ORDER BY quantitySold DESC,itemRevenue DESC,p.id LIMIT 5`);

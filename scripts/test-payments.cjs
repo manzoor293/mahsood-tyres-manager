@@ -70,7 +70,7 @@ app.whenReady().then(()=>{
     const handlers=new Map();registerPaymentIpc({handle:(name,fn)=>handlers.set(name,fn)},services,(event)=>event.trusted);assert.equal(handlers.size,10);
     for(const handler of handlers.values()){assert.equal(handler({trusted:false}).error.code,'FORBIDDEN');assert.equal(handler({trusted:true},{},{}).error.code,'VALIDATION');}
     assert.equal(handlers.get(`${resource}:create`)({trusted:true},{}).error.code,'VALIDATION');assert.equal(handlers.get(`${resource}:getOutstanding`)({trusted:true}).error.code,'VALIDATION');
-    assert.deepEqual(db.pragma('foreign_key_check'),[]);assert.equal(db.pragma('user_version',{simple:true}),3);
+    assert.deepEqual(db.pragma('foreign_key_check'),[]);assert.equal(db.pragma('user_version',{simple:true}),4);
     other.close();other=null;db.close();db=openDatabase(filename);service=createPaymentServices(db)[resource];assert.equal(service.getOutstanding(1).balance,0);
     console.log(`PASS: ${resource} unpaid/partial/final payments, safe integer validation, history/filtering/paging, account summaries, account/invoice matching, stale second connection, rollback, inactive settlement, persistence, protected records, IPC guards and Sales/Purchases/Dashboard/Reports integration.`);
   }catch(error){code=1;console.error(error);}finally{if(other?.open)other.close();if(db?.open)db.close();app.exit(code);}

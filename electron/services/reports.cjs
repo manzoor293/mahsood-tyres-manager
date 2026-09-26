@@ -24,7 +24,7 @@ function normalize(method,input={},now) {
     if(key==='search')filters.search=v.text(input.search??'','Search',200,true)||'';
     else if(key.endsWith('_id'))filters[key]=input[key]===undefined?null:v.id(input[key]);
   }
-  if(allowed.includes('payment_status'))filters.payment_status=choice(input.payment_status??'all',['all','paid','partial','unpaid'],'payment status');
+  if(allowed.includes('payment_status'))filters.payment_status=choice(input.payment_status??'all',['all','paid','partial','unpaid','credit'],'payment status');
   // Exact persisted methods, including legacy/custom purchase methods, are valid read filters.
   if(allowed.includes('payment_method'))filters.payment_method=v.text(input.payment_method??'all','Payment method',80);
   if(allowed.includes('walk_in')) {
@@ -45,7 +45,7 @@ function createReportsService(db,clock=()=>new Date()) {
     if(method==='getProfit') {
       const s=result.summary;
       Object.assign(s,profitAmounts(s.salesRevenue,s.historicalCost,s.unknownCostItemCount,s.expenses));
-      result.rows=result.rows.map((row)=>({...row,grossProfit:profitAmounts(row.total,row.historicalCost,row.unknownCostItemCount).grossProfit}));
+      result.rows=result.rows.map((row)=>({...row,grossProfit:profitAmounts(row.effective_total,row.historicalCost,row.unknownCostItemCount).grossProfit}));
     }
     return {...result,totalRows:result.summary.rowCount,limit:filters.limit,offset:filters.offset,
       range:period?{from:period.from,to:period.to,timeZone:Intl.DateTimeFormat().resolvedOptions().timeZone}:null};
