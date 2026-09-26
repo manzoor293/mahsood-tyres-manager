@@ -13,8 +13,9 @@ const DashboardPage = lazy(() => import('../pages/DashboardPage.jsx'));
 const ReportsPage = lazy(() => import('../pages/ReportsPage.jsx'));
 const ReturnsPage = lazy(() => import('../pages/ReturnsPage.jsx'));
 const PaymentsPage = lazy(() => import('../pages/PaymentsPage.jsx'));
+const SettingsPage = lazy(() => import('../pages/SettingsPage.jsx'));
 import { navigation } from './navigation.js';
-const implementedPages = { '/returns': ReturnsPage, '/payments': PaymentsPage, '/reports': ReportsPage, '/dashboard': DashboardPage, '/products': ProductsPage, '/suppliers': SuppliersPage, '/purchases': PurchasesPage, '/inventory': InventoryPage, '/customers': CustomersPage, '/sales': SalesPage, '/expenses': ExpensesPage };
+const implementedPages = { '/settings': SettingsPage, '/returns': ReturnsPage, '/payments': PaymentsPage, '/reports': ReportsPage, '/dashboard': DashboardPage, '/products': ProductsPage, '/suppliers': SuppliersPage, '/purchases': PurchasesPage, '/inventory': InventoryPage, '/customers': CustomersPage, '/sales': SalesPage, '/expenses': ExpensesPage };
 
 export default function AppRoutes() {
   return (

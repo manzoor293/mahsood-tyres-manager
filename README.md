@@ -176,7 +176,7 @@ PDF uses Electron `printToPDF` and a native Save dialog. Main sanitizes the sugg
 
 Run `npm run test:printing` and, after building, `npm run test:printing:ui`. These tests use temporary databases and isolated Electron profiles, intercept native printer calls, and generate real PDFs only in the temporary directory. They cover all document types, fresh reads, original/current balances, payment recording order, cost exclusion, markup escaping, IDs/IPC, cancellation/errors, read-only behavior, cleanup, A4 PDF dimensions/multiple pages, and narrow previews. A preview screenshot is written to ignored `artifacts/printing-preview.png`. No automated test sends output to a physical printer. Native print and PDF behavior follow the [Electron webContents API](https://www.electronjs.org/docs/latest/api/web-contents); output selection uses the [Electron Save dialog](https://www.electronjs.org/docs/latest/api/dialog#dialogshowsavedialogwindow-options).
 
-Deferred: thermal/80 mm layouts and device-specific testing, Settings identity editing, vehicle data capture, tax/accounting calculations, transaction/payment/return editing, refunds, prepayments, cloud printing, email/WhatsApp delivery, sync and backup/restore. A4 remains the supported layout until thermal printer sizing and pagination are separately verified.
+Deferred: thermal/80 mm layouts and device-specific testing, Settings identity editing, vehicle data capture, tax/accounting calculations, transaction/payment/return editing, refunds, prepayments, cloud printing, email/WhatsApp delivery and sync. A4 remains the supported layout until thermal printer sizing and pagination are separately verified.
 
 ## Returns / Reversals
 
@@ -196,7 +196,7 @@ Eight scoped preload methods are exposed: window.api.saleReturns.{list,getReturn
 
 Run test:sale-returns, test:purchase-returns and their :ui counterparts after building. Tests use deterministic temporary databases/profiles, cover migration, rollback, stale connections, stock shortages, partial/full/repeated returns, discount rounding, protected history, credit and outstanding balances, later payment settlement, cross-module analytics, and actual renderer/preload/IPC behavior. Screenshots are written to ignored artifacts/. The real shop database is never a test target.
 
-Deferred: return editing/deletion or reversal-of-return corrections, payment editing/deletion, cash refund processing, store-credit spending, prepayments, advanced accounting, payroll, forecasting, sync and backup/restore.
+Deferred: return editing/deletion or reversal-of-return corrections, payment editing/deletion, cash refund processing, store-credit spending, prepayments, advanced accounting, payroll, forecasting and sync.
 
 ## Customer and Supplier Payments
 
@@ -224,7 +224,7 @@ Implementation files are `electron/{repositories,services,ipc}/payments.cjs`, `s
 
 Run `npm run test:customer-payments`, `npm run test:supplier-payments`, then build and run `npm run test:customer-payments:ui` / `npm run test:supplier-payments:ui`. Shared deterministic fixtures and test harnesses use separate temporary databases/profiles for each run. Backend coverage includes unpaid/partial/final settlement, malformed inputs/overpayment/fully-paid rejection, account matching, walk-in rejection, a second connection committing after a stale read, AFTER INSERT rollback, inactive settlement, persistence, paging/history and IPC guards. UI coverage includes actual renderer/preload/IPC selection, review, payments, stale balance refresh, duplicate-submit protection, history filters/paging, errors/retry, narrow windows and integration with existing Sales/Purchases/Dashboard/Reports reads. Protected-table snapshots verify that payments do not change invoice totals/items or stock. Screenshots are saved under ignored `artifacts/customerPayments-ui.png` and `artifacts/supplierPayments-ui.png`.
 
-Payment editing/deletion, cash refunds, credit spending/prepayments, advanced accounting, payroll, forecasting, cloud sync and backup/restore remain deferred.
+Payment editing/deletion, cash refunds, credit spending/prepayments, advanced accounting, payroll, forecasting and cloud sync remain deferred.
 
 ## Reports
 
@@ -259,7 +259,7 @@ Shared code extracted from Dashboard is in `electron/utils/analytics.cjs` (date 
 
 Run `npm run test:reports`, then `npm run build` and `npm run test:reports:ui`. Deterministic fixture databases and Electron profiles are created in temporary directories, never in shop data. Backend tests cover all eight reports, full-filter totals across pages, payment scopes, local boundary dates, historical discounted profit, unknown costs, integer overflow, accounts, validation, read-only persistence and IPC guards. UI tests exercise all eight real renderer/preload/IPC methods, filters/lookups/dates, pagination, internal item inspection, warnings, empty/loading/error/retry and narrow layout. Screenshots are saved to ignored `artifacts/reports-ui.png` and `artifacts/reports-narrow.png`. Regression checks include Dashboard and both Electron modes.
 
-Report PDF/Excel/CSV exports, forecasting, payroll, cloud synchronization, backup/restore and formal accounting statements remain deferred.
+Report PDF/Excel/CSV exports, forecasting, payroll, cloud synchronization and formal accounting statements remain deferred.
 
 ## Dashboard analytics
 
@@ -290,7 +290,25 @@ UI files are `src/pages/DashboardPage.jsx` and `src/components/dashboard/{Dashbo
 
 Run `npm run test:dashboard`, then `npm run build` and `npm run test:dashboard:ui`. Tests use deterministic fixtures in isolated temporary databases/profiles, never shop data. They cover known arithmetic, discounts, partial payments, current balances/stock, historical and unknown costs, local-midnight/legacy date boundaries, zero-filled daily/monthly trends, ranking/order, read-only operation, safe integer overflow, validation and the real UI/preload/IPC path. Screenshots are saved to ignored `artifacts/dashboard-ui.png` and `artifacts/dashboard-narrow.png`. Both Electron smoke checks also call the Dashboard API.
 
-PDF/export/printing, forecasts, formal accounting statements, payroll, cloud sync and backup/restore remain deferred.
+Dashboard PDF/export/printing, forecasts, formal accounting statements, payroll and cloud sync remain deferred.
+
+## Local Backup & Restore
+
+Settings provides Data Backup & Restore, database health/location/schema, the last successful manual backup in the current session, and recovery backup names/dates/sizes. No migration was added: schema **4**, **20 application tables**.
+
+**Create Backup** opens a native Save dialog with a timestamped filename. Main uses better-sqlite3's [SQLite online backup API](https://github.com/WiseLibs/better-sqlite3/blob/master/docs/api.md#backupdestination-options---promise), including committed WAL data. A unique temporary snapshot is converted to standalone journal mode, validated and flushed before replacing the selected output. Failed snapshots do not overwrite existing backups.
+
+**Restore Backup** requires the Settings warning/checkbox/confirmation, then a native confirmation with Cancel as the default and an Open dialog. Main validates the selected database, snapshots it into the database directory and applies forward migrations to that temporary copy before touching live data. Validation checks exact application tables/indexes/triggers for the declared schema, `PRAGMA integrity_check` and foreign keys. Schemas **1, 2 and 3** are tested through existing migrations to **4**. Newer, unrelated, malformed, corrupted or unexpected schemas are rejected. Files with WAL/SHM companions are rejected; choose a completed standalone backup. Active database paths, symbolic links and hardlink aliases are protected.
+
+A verified `pre-restore-backup-<unique-id>.sqlite3` is retained under `app.getPath('userData')/recovery` before replacement. Recovery backups are never silently overwritten or pruned. They can also be selected in the Restore dialog. One maintenance lock excludes concurrent backup/restore and business IPC operations, including in-flight printing. A single application instance owns the profile. Normal window close/quit is prevented while maintenance is pending.
+
+Restore checkpoints WAL, writes a recovery marker, closes the connection, clears closed-database sidecars, renames the original aside and installs the staged snapshot. It reopens SQLite with existing pragmas and rebinds all business services/IPC handlers to fresh statements. Successful restore needs no restart. Replacement/reopen failure restores the checkpointed original; if missing or damaged, recovery uses the verified safety snapshot. Startup checks the marker before normal initialization, so interruption cannot silently create an empty database. Unrecoverable failures block business access and retain recovery files; close/reopen to retry recovery. Do not delete these files or manually replace an open database.
+
+Only `window.api.backup.getInfo()`, `.create()` and `.restore()` are exposed. They take **no arguments**, using the existing `{ok,data}` / `{ok:false,error}` envelope. File selections happen only in main-process native dialogs. Cancellation returns `{canceled:true}` and appears as information. Restore success includes schema version and recovery filename; backup success includes filename/time. `getInfo()` returns health, schema version, location, session backup metadata and recovery metadata. The renderer has no general filesystem or database API.
+
+Run `npm run test:backup`, `npm run build`, then `npm run test:backup:ui`. Tests use temporary databases and isolated profiles. The round-trip fixture uses existing services across catalog, suppliers, purchases, inventory, customers, sales, both payment types, expenses and both return types, comparing every persisted table before/after restore. Cases cover compatibility, integrity/foreign-key failure, invalid files, cancellation, concurrency, protected paths, failed verification/disk/permissions, migration/replacement/reopen failure, interrupted replacement, safety recovery and stale sidecars. UI tests use real renderer/preload/IPC/main services with native selections intercepted, and verify loading/empty/error/retry/success/busy states, deliberate confirmation, fresh business services and narrow layouts. Both Electron smoke suites also call the Backup API.
+
+Deferred: scheduled backups, cloud/remote storage, synchronization, encryption/password-protected archives, incremental backups, automatic retention cleanup, accounts/role permissions and transaction editing.
 
 ## Catalog backend API
 

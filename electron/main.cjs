@@ -1,4 +1,8 @@
-const { app, BrowserWindow, session, ipcMain } = require('electron');
+const { app, BrowserWindow, session, ipcMain, dialog } = require('electron');
+const {createMaintenanceGate}=require('./ipc/maintenance.cjs');
+const {registerBackupIpc}=require('./ipc/backup.cjs');
+const {createBackupService}=require('./services/backup.cjs');
+const {recoverInterruptedRestore}=require('./database/restore-files.cjs');
 const {createPrintingService}=require('./services/printing.cjs');
 const {createPrintDriver}=require('./printing/driver.cjs');
 const {registerPrintingIpc}=require('./ipc/printing.cjs');
@@ -26,7 +30,7 @@ const { createPurchaseService } = require('./services/purchases.cjs');
 const { registerPurchaseIpc } = require('./ipc/purchases.cjs');
 const { registerSupplierIpc } = require('./ipc/suppliers.cjs');
 const { registerCatalogIpc, createSenderGuard } = require('./ipc/catalog.cjs');
-const { initializeDatabase, closeDatabase } = require('./database/index.cjs');
+const { initializeDatabase, closeDatabase, getDatabasePath } = require('./database/index.cjs');
 
 app.setName('Mahsood Tyre Manager');
 const development = !app.isPackaged && process.argv.includes('--dev');
@@ -66,6 +70,7 @@ async function createWindow() {
   window.webContents.on('will-navigate', (event) => event.preventDefault());
   window.webContents.on('will-attach-webview', (event) => event.preventDefault());
   window.once('ready-to-show', () => window.show());
+  window.on('close', event => { if (backupService?.isBusy()) event.preventDefault(); });
 
   if (development) {
     await window.loadURL(rendererUrl);
@@ -79,8 +84,7 @@ function fail(error) {
   app.exit(1);
 }
 
-app.whenReady().then(async () => {
-  const database = initializeDatabase(app);
+function bindBusinessIpc(database, ipcMain) {
   registerPrintingIpc(ipcMain,createPrintingService(database,createPrintDriver()),createSenderGuard(allowedContents,rendererUrl));
   registerReturnIpc(ipcMain,createReturnServices(database),createSenderGuard(allowedContents,rendererUrl));
   registerPaymentIpc(ipcMain, createPaymentServices(database), createSenderGuard(allowedContents, rendererUrl));
@@ -93,6 +97,23 @@ app.whenReady().then(async () => {
   registerCatalogIpc(ipcMain, createCatalogServices(database), createSenderGuard(allowedContents, rendererUrl));
   registerSupplierIpc(ipcMain, createSupplierService(database), createSenderGuard(allowedContents, rendererUrl));
   registerPurchaseIpc(ipcMain, createPurchaseService(database), createSenderGuard(allowedContents, rendererUrl));
+}
+
+let backupService;
+const primaryInstance = app.requestSingleInstanceLock();
+if (!primaryInstance) app.quit();
+app.on('second-instance', () => {
+  const window = BrowserWindow.getAllWindows()[0];
+  if (window) { if (window.isMinimized()) window.restore(); window.focus(); }
+});
+if (primaryInstance) app.whenReady().then(async () => {
+  recoverInterruptedRestore(getDatabasePath(app));
+  const database = initializeDatabase(app);
+  const gate = createMaintenanceGate(ipcMain);
+  const reopen = () => { const db = initializeDatabase(app); bindBusinessIpc(db, gate.ipc); return db; };
+  bindBusinessIpc(database, gate.ipc);
+  backupService = createBackupService({ app, dialogs: dialog, getDatabase: () => initializeDatabase(app), closeDatabase, reopen, gate });
+  registerBackupIpc(ipcMain, backupService, createSenderGuard(allowedContents, rendererUrl));
   console.log(`Database initialized (schema ${database.pragma('user_version', { simple: true })}): ${database.name}`);
   session.defaultSession.setPermissionRequestHandler((_contents, _permission, callback) => callback(false));
   session.defaultSession.setPermissionCheckHandler(() => false);
@@ -102,6 +123,7 @@ app.whenReady().then(async () => {
   });
 }).catch(fail);
 
+app.on('before-quit', event => { if (backupService?.isBusy()) event.preventDefault(); });
 app.on('will-quit', closeDatabase);
 
 app.on('window-all-closed', () => {

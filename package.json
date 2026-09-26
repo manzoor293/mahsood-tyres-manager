@@ -6,6 +6,8 @@
   "type": "module",
   "main": "electron/main.cjs",
   "scripts": {
+    "test:backup": "node scripts/test-products-ui.mjs --backup-backend",
+    "test:backup:ui": "node scripts/test-products-ui.mjs --backup-ui",
     "dev": "node scripts/dev.mjs",
     "build": "vite build",
     "start": "node scripts/start.mjs",
