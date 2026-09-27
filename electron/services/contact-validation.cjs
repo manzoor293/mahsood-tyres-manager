@@ -9,12 +9,16 @@ function contactData(data, current) {
     const value = Object.hasOwn(data, field) ? data[field] : current?.[field];
     result[field] = v.text(value, field, field === 'notes' ? 5000 : field === 'address' ? 1000 : field === 'phone' ? 40 : 200, field !== 'name');
   }
-  if (result.phone !== null) {
-    if (!/^\+?[\d ()-]+$/.test(result.phone)) v.invalid('Phone must contain digits with an optional leading +, spaces, parentheses or hyphens.');
-    result.phone = result.phone.replace(/[ ()-]/g, '');
-    if (!/^\+?\d{7,15}$/.test(result.phone)) v.invalid('Phone must contain 7 to 15 digits.');
-  }
+  result.phone = normalizePhone(result.phone);
   return result;
+}
+
+function normalizePhone(value, label = 'Phone') {
+  if (value === null) return null;
+  if (!/^\+?[\d ()-]+$/.test(value)) v.invalid(`${label} must contain digits with an optional leading +, spaces, parentheses or hyphens.`);
+  const normalized = value.replace(/[ ()-]/g, '');
+  if (!/^\+?\d{7,15}$/.test(normalized)) v.invalid(`${label} must contain 7 to 15 digits.`);
+  return normalized;
 }
 
 function contactFilters(data = {}) {
@@ -22,4 +26,4 @@ function contactFilters(data = {}) {
   const { search, ...paging } = data;
   return { ...v.filters(paging), search: search === undefined ? '' : v.text(search, 'search', 200, true) || '' };
 }
-module.exports = { contactData, contactFilters };
+module.exports = { contactData, contactFilters, normalizePhone };

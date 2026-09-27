@@ -18,7 +18,6 @@ function createPrintingRepository(db) {
       FROM ${c.invoices} i LEFT JOIN ${c.contacts} a ON a.id=i.${c.contact}`) + ' WHERE id=?').get(id);
   }
   return {
-    settings: () => prepare("SELECT key,value FROM settings WHERE key IN ('shop.name','shop.address','shop.phone','shop.email','shop.ntn')").all(),
     invoice,
     invoiceItems(kind,id) {
       const c=kinds[kind], price=kind==='sale'?'unit_price':'unit_cost';

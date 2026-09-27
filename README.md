@@ -310,6 +310,20 @@ Run `npm run test:backup`, `npm run build`, then `npm run test:backup:ui`. Tests
 
 Deferred: scheduled backups, cloud/remote storage, synchronization, encryption/password-protected archives, incremental backups, automatic retention cleanup, accounts/role permissions and transaction editing.
 
+## Shop settings
+
+Settings includes Shop Profile, Invoice & Receipt, read-only Application Preferences, and the existing Data Backup & Restore controls. Save Changes persists explicitly; unsaved edits show a warning and can be discarded. Leaving the page discards unsaved edits. Saving disables repeated submission and backup actions; restore reloads the restored profile.
+
+The explicit APIs are `window.api.settings.getShopProfile()`, `updateShopProfile(data)` and `getPreferences()`, using the standard result envelope. Main-process validation and a transactional repository use the existing strict `settings` table (`id`, unique `key`, text `value`, `updated_at`). Schema remains **4**, with **20 application tables** and no migration. Keys are `shop.name`, `shop.address`, `shop.phone`, `shop.alternatePhone`, `shop.email`, `shop.ntn` (the existing printing convention), and `printing.footer`. No arbitrary settings or SQL API is exposed.
+
+Name is required (200 characters); address/footer allow 1,000 characters, phones 40 before normalization, email 254, registration ID 100. Text is trimmed; unknown fields, HTML delimiters and control characters are rejected. Optional fields can be cleared. Phones use the same optional leading plus and 7–15 digit normalization as contacts; email is validated when supplied. Registration IDs remain text. Defaults live in the settings service: Mahsood Tyre Manager and empty optional details, without inserting default rows.
+
+All six document types use the current persisted profile for every future preview, print and PDF, including documents for older transactions. Historical transaction amounts/items remain unchanged; shop identity is not snapshotted. The shared template displays the configured footer separately from transaction provenance. SQLite backup/restore includes settings naturally, with no separate settings files.
+
+Currency remains read-only Pakistani Rupee (PKR); integer paise storage is unchanged. Default payment-method selection is deferred to avoid coupling this module to multiple transaction forms. Authentication, permissions, themes, multi-currency, branches and cloud sync remain outside this module.
+
+Run `npm run test:settings` and, after `npm run build`, `npm run test:settings:ui`. These use temporary databases/isolated profiles and cover defaults, validation, reopen persistence, trusted IPC, six-document output integration, backup roundtrip, UI loading/error/retry, dirty/discard/save states, duplicate submission, restored profile refresh and narrow layout. Printing regression tests additionally generate actual Chromium PDFs.
+
 ## Catalog backend API
 
 `electron/repositories/catalog.cjs` contains parameterized SQL. `electron/services/catalog.cjs` handles validation and write transactions, using `services/validation.cjs`. `electron/ipc/catalog.cjs` registers only the catalog methods; SQL and database handles never cross the preload bridge.

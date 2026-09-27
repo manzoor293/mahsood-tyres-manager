@@ -1,6 +1,7 @@
 const v = require('./validation.cjs');
 const {safeNumbers} = require('../utils/analytics.cjs');
 const {createPrintingRepository} = require('../repositories/printing.cjs');
+const {createSettingsService, shopDefaults} = require('./settings.cjs');
 
 const documentTypes = Object.freeze({
   saleInvoice: {kind:'sale', category:'invoice', title:'Sales Invoice / Receipt', prefix:'SALE'},
@@ -10,7 +11,6 @@ const documentTypes = Object.freeze({
   saleReturn: {kind:'sale', category:'return', title:'Sale Return / Credit Note', prefix:'SR'},
   purchaseReturn: {kind:'purchase', category:'return', title:'Purchase Return / Debit Note', prefix:'PR'},
 });
-const shopDefaults = Object.freeze({name:'Mahsood Tyre Manager', address:'', phone:'', email:'', ntn:''});
 function validateDocument(type,id) {
   if(typeof type!=='string'||!Object.hasOwn(documentTypes,type))v.invalid('Choose a supported printable document.');
   v.id(id);
@@ -23,16 +23,13 @@ function suggestedFilename(reference) {
 }
 function createDocumentService(db,clock=()=>new Date()) {
   const repository=createPrintingRepository(db);
+  const settings=createSettingsService(db);
   function load(type,id) {
     const config=validateDocument(type,id),sale=config.kind==='sale';
-    const shop={...shopDefaults};
-    for(const row of repository.settings()) {
-      const key=row.key.slice(5);
-      if(typeof row.value==='string'&&row.value.trim())shop[key]=row.value.trim();
-    }
+    const shop=settings.getShopProfile();
     const document={type,title:config.title,shop,contactLabel:sale?'Customer':'Supplier',items:[],totals:[],current:[],relatedReturns:[],
       unitLabel:sale?'Unit selling price':'Historical unit cost',lineLabel:'Line total',generatedAt:clock().toISOString(),
-      footer:'Product and contact descriptions reflect current directory records. Transaction quantities and prices are historical.'};
+      footer:shop.footer, provenance:'Product and contact descriptions reflect current directory records. Transaction quantities and prices are historical.'};
     let invoice,record;
     if(config.category==='invoice') {
       invoice=safeNumbers(repository.invoice(config.kind,id));

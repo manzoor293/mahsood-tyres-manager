@@ -1,5 +1,7 @@
 const { app, BrowserWindow, session, ipcMain, dialog } = require('electron');
 const {createMaintenanceGate}=require('./ipc/maintenance.cjs');
+const {createSettingsService}=require('./services/settings.cjs');
+const {registerSettingsIpc}=require('./ipc/settings.cjs');
 const {registerBackupIpc}=require('./ipc/backup.cjs');
 const {createBackupService}=require('./services/backup.cjs');
 const {recoverInterruptedRestore}=require('./database/restore-files.cjs');
@@ -85,6 +87,7 @@ function fail(error) {
 }
 
 function bindBusinessIpc(database, ipcMain) {
+  registerSettingsIpc(ipcMain, createSettingsService(database), createSenderGuard(allowedContents, rendererUrl));
   registerPrintingIpc(ipcMain,createPrintingService(database,createPrintDriver()),createSenderGuard(allowedContents,rendererUrl));
   registerReturnIpc(ipcMain,createReturnServices(database),createSenderGuard(allowedContents,rendererUrl));
   registerPaymentIpc(ipcMain, createPaymentServices(database), createSenderGuard(allowedContents, rendererUrl));

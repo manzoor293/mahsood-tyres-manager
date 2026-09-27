@@ -1,8 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { Alert, Button, Checkbox, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, Paper } from '@mui/material';
 import { catalogRequest } from '../utils/catalog.js';
+import ShopProfileForm from '../components/settings/ShopProfileForm.jsx';
 
 export default function SettingsPage() {
+  const [profileRevision, setProfileRevision] = useState(0);
+  const [profileSaving, setProfileSaving] = useState(false);
   const [info, setInfo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -25,15 +28,17 @@ export default function SettingsPage() {
     pending.current = true; setBusy(method); setError(''); setNotice(null); setConfirm(false);
     try {
       const result = await catalogRequest(() => window.api.backup[method]());
+      if (method === 'restore' && !result.canceled) setProfileRevision(value => value + 1);
       setNotice(result.canceled ? { severity: 'info', text: 'Operation cancelled.' }
         : { severity: 'success', text: method === 'create' ? `Backup created: ${result.name}` : 'Backup restored successfully. All modules now use the restored data. A safety backup of your previous data has been retained.' });
       await refresh();
     } catch (error) { setError(error.message); }
     finally { pending.current = false; setBusy(''); }
   }
-  const disabled = loading || Boolean(busy) || !info;
+  const disabled = loading || Boolean(busy) || profileSaving || !info;
   return <section className="mx-auto min-w-0 max-w-4xl" aria-labelledby="page-title">
     <h1 id="page-title" className="text-3xl font-semibold">Settings</h1>
+    <ShopProfileForm key={profileRevision} maintenanceBusy={Boolean(busy)} onSavingChange={setProfileSaving}/>
     <Paper variant="outlined" sx={{ mt: 3, p: { xs: 2, sm: 3 }, overflowWrap: 'anywhere' }}>
       <h2 className="text-xl font-semibold">Data Backup &amp; Restore</h2>
       <p className="my-3 text-sm text-slate-600">Save a complete local copy of your shop data. Keep important backups on a separate drive.</p>

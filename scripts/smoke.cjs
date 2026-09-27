@@ -26,6 +26,7 @@ app.on('browser-window-created', (_event, window) => {
       const catalog = await window.webContents.executeJavaScript(`(async () => ({
         brands: await window.api.brands.list({limit:1}),
         backup: await window.api.backup.getInfo(),
+        settings: await window.api.settings.getShopProfile(),
         dashboard: await window.api.dashboard.getOverview(),
         reports: await window.api.reports.getSales({limit:1}),
         customerPayments: await window.api.customerPayments.list({limit:1}),
