@@ -21,6 +21,7 @@ app.on('browser-window-created',(_,window)=>{
   let fail=false,submissions=0;
   for(const [name,handler]of handlers){ipcMain.removeHandler(name);ipcMain.handle(name,async(...args)=>{if(name===`${resource}:create`)submissions++;await new Promise((r)=>setTimeout(r,300));return fail&&name===`${resource}:list`?{ok:false,error:{code:'INTERNAL',message:'Temporary payment list failure'}}:handler(...args);});}
   window.webContents.once('did-finish-load',async()=>{
+    await require('./auth-test-helper.cjs').authenticate(window);
     const evaluate=(code)=>window.webContents.executeJavaScript(code);
     const wait=async(condition)=>{for(let i=0;i<180;i++){if(await evaluate(condition))return;await new Promise((r)=>setTimeout(r,50));}throw new Error(`Timed out: ${condition}`);};
     const click=async(label)=>{const selector=`Array.from(document.querySelectorAll('button')).find(b=>(b.textContent.trim()===${JSON.stringify(label)}||b.getAttribute('aria-label')===${JSON.stringify(label)})&&!b.disabled)`;await wait(`Boolean(${selector})`);await evaluate(`${selector}.click()`);};

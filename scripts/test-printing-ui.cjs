@@ -25,6 +25,7 @@ app.on('browser-window-created',(_,window)=>{
   registerPrintingIpc({handle:(name,fn)=>handlers.set(name,fn)},service,createSenderGuard(new Set([window.webContents]),pathToFileURL(path.join(__dirname,'../dist/index.html')).href));
   for(const [name,handler] of handlers){ipcMain.removeHandler(name);ipcMain.handle(name,async(...args)=>{await new Promise(resolve=>setTimeout(resolve,200));return loadFailure?{ok:false,error:{code:'INTERNAL',message:'Temporary document loading failure'}}:handler(...args);});}
   window.webContents.once('did-finish-load',async()=>{
+    await require('./auth-test-helper.cjs').authenticate(window);
     const evaluate=(code)=>window.webContents.executeJavaScript(code);
     const wait=async(condition)=>{for(let i=0;i<220;i++){if(await evaluate(condition))return;await new Promise(resolve=>setTimeout(resolve,50));}throw Error(`Timed out: ${condition}`);};
     const click=async(label)=>{const selector=`Array.from(document.querySelectorAll('button')).find(b=>(b.textContent.trim()===${JSON.stringify(label)}||b.getAttribute('aria-label')===${JSON.stringify(label)})&&!b.disabled)`;await wait(`Boolean(${selector})`);await evaluate(`${selector}.click()`);};

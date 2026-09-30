@@ -30,6 +30,7 @@ app.on('browser-window-created', (_, window) => {
   if (attached) return; attached = true;
   seedPrinting(initializeDatabase(app));
   window.webContents.once('did-finish-load', async () => {
+    await require('./auth-test-helper.cjs').authenticate(window);
     const evaluate = code => window.webContents.executeJavaScript(code);
     const wait = async condition => { for (let i = 0; i < 200; i++) { if (await evaluate(condition)) return; await new Promise(resolve => setTimeout(resolve, 50)); } throw Error(`Timed out: ${condition}`); };
     const button = label => `Array.from(document.querySelectorAll('button')).find(b => b.textContent.trim() === ${JSON.stringify(label)})`;
@@ -66,7 +67,7 @@ app.on('browser-window-created', (_, window) => {
       await edit('name', 'After backup'); await save(); releaseSave(); await text('Shop settings saved.');
       await click('Restore Backup'); await text('Restore shop data?');
       await evaluate(`document.querySelector('input[type="checkbox"]').click()`); await click('Continue to Restore');
-      await text('Backup restored successfully.'); await wait(`${field('name')}?.value === 'Retry saved'`);
+      await text('Sign in to Mahsood Tyre Manager'); await require('./auth-test-helper.cjs').authenticate(window); await wait(`${field('name')}?.value === 'Retry saved'`);
       const restored = await evaluate("window.api.printing.preview('saleInvoice', 1)"); assert.match(restored.data.html, /Retry saved/);
       window.setSize(640, 480); await new Promise(resolve => setTimeout(resolve, 250));
       assert.equal(await evaluate('document.documentElement.scrollWidth > innerWidth'), false);

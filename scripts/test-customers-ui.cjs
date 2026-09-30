@@ -14,6 +14,7 @@ app.setPath('sessionData', process.env.MAHSOOD_UI_TEST_DATA);
 const timeout = setTimeout(() => { console.error('FAIL: Customer UI test timed out'); app.exit(1); }, 60000);
 app.on('browser-window-created', (_event, window) => {
   window.webContents.once('did-finish-load', async () => {
+    await require('./auth-test-helper.cjs').authenticate(window);
     const database = initializeDatabase(app);
     const evaluate = (code) => window.webContents.executeJavaScript(code);
     const wait = async (condition) => {

@@ -62,7 +62,7 @@ app.whenReady().then(()=>{
     const handlers=new Map();const ipc={handle:(name,fn)=>handlers.set(name,fn),removeHandler:(name)=>handlers.delete(name)};
     const unregister=registerReportsIpc(ipc,service,(event)=>event.trusted);assert.equal(handlers.size,8);
     for(const handler of handlers.values()){assert.equal(handler({trusted:false}).error.code,'FORBIDDEN');assert.equal(handler({trusted:true},{},{}).error.code,'VALIDATION');assert.equal(handler({trusted:true},{sql:'bad'}).error.code,'VALIDATION');assert.equal(handler({trusted:true}).ok,true);}
-    unregister();assert.equal(handlers.size,0);assert.equal(db.pragma('user_version',{simple:true}),4);assert.deepEqual(db.pragma('foreign_key_check'),[]);
+    unregister();assert.equal(handlers.size,0);assert.equal(db.pragma('user_version',{simple:true}), 5);assert.deepEqual(db.pragma('foreign_key_check'),[]);
     db.close();db=openDatabase(filename,{readonly:true});assert.equal(createReportsService(db,clock).getSales().totalRows,28);
     db.close();db=openDatabase(filename);const expenseBig=db.prepare("INSERT INTO expenses(expense_category_id,amount,description,payment_method,spent_at) VALUES (1,?,'Large','Cash','2026-09-01')");expenseBig.run(Number.MAX_SAFE_INTEGER);
     assert.throws(()=>createReportsService(db,clock).getExpenses(),(e)=>e.code==='RANGE');

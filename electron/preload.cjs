@@ -4,6 +4,18 @@ contextBridge.exposeInMainWorld('desktop', { isElectron: true });
 
 // Channel selection stays in preload; no invoke/send/SQL API crosses the bridge.
 contextBridge.exposeInMainWorld('api', {
+  auth: {
+    getStatus: () => ipcRenderer.invoke('auth:getStatus'),
+    setup: (data) => ipcRenderer.invoke('auth:setup', data),
+    login: (data) => ipcRenderer.invoke('auth:login', data),
+    logout: () => ipcRenderer.invoke('auth:logout'),
+    onChanged: (callback) => {
+      if (typeof callback !== 'function') throw new TypeError('Expected a callback.');
+      const listener = () => callback();
+      ipcRenderer.on('auth:changed', listener);
+      return () => ipcRenderer.removeListener('auth:changed', listener);
+    },
+  },
   settings: {
     getShopProfile: () => ipcRenderer.invoke('settings:getShopProfile'),
     updateShopProfile: (data) => ipcRenderer.invoke('settings:updateShopProfile', data),

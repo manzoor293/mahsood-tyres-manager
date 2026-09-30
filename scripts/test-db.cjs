@@ -12,7 +12,7 @@ if (process.env.MAHSOOD_UI_TEST_DATA) {
 }
 
 const tables = [
-  'brands', 'categories', 'products', 'suppliers', 'customers', 'purchases',
+  'administrator', 'brands', 'categories', 'products', 'suppliers', 'customers', 'purchases',
   'purchase_items', 'sales', 'sale_items', 'inventory', 'stock_movements',
   'supplier_payments', 'customer_payments', 'expense_categories', 'expenses', 'settings', 'sale_returns', 'sale_return_items', 'purchase_returns', 'purchase_return_items',
 ];
@@ -62,7 +62,7 @@ app.whenReady().then(() => {
     database = openDatabase(filename, { readonly: true });
     const existingTables = new Set(database.prepare("SELECT name FROM sqlite_schema WHERE type = 'table'").all().map((row) => row.name));
     check(`Schema version is ${schemaVersion}`, () => assert.equal(database.pragma('user_version', { simple: true }), schemaVersion));
-    check('All 20 expected tables exist', () => {
+    check('All 21 expected tables exist', () => {
       for (const table of tables) assert.ok(existingTables.has(table), `Missing table: ${table}`);
     });
     // foreign_keys is a connection setting, not a persistent database property.

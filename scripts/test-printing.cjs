@@ -77,9 +77,9 @@ app.whenReady().then(async()=>{
       for(const args of [['saleInvoice',1,{}],['bad',1],['saleInvoice','1']])assert.equal((await handler({trusted:true},...args)).error.code,'VALIDATION');
     }
     assert.equal((await handlers.get('printing:preview')({trusted:true,sender:owner.webContents},'saleInvoice',1)).ok,true);
-    assert.equal(db.pragma('user_version',{simple:true}),4);assert.deepEqual(db.pragma('foreign_key_check'),[]);
+    assert.equal(db.pragma('user_version',{simple:true}),5);assert.deepEqual(db.pragma('foreign_key_check'),[]);
     // Only intentional fixture changes occurred; printing APIs introduce no writes.
     const afterFixture=db.serialize();await output.savePdf('saleInvoice',1);assert.deepEqual(db.serialize(),afterFixture);assert.notDeepEqual(protectedSnapshot,afterFixture);
-    console.log('PASS Printing: six persisted documents, historical/current separation, payment-order balances, walk-in/legacy handling, cost exclusion, escaping, safe paise/filenames, fresh reads, IPC validation, output guard, native printer interception, cancellation/failures, real PDF generation, cleanup and schema-4 read-only behavior.');
+    console.log('PASS Printing: six persisted documents, historical/current separation, payment-order balances, walk-in/legacy handling, cost exclusion, escaping, safe paise/filenames, fresh reads, IPC validation, output guard, native printer interception, cancellation/failures, real PDF generation, cleanup and schema-5 read-only behavior.');
   }catch(error){console.error(error);code=1;}finally{if(owner&&!owner.isDestroyed())owner.destroy();if(db?.open)db.close();clearTimeout(timeout);app.exit(code);}
 });

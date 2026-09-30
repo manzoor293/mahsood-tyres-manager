@@ -2,6 +2,20 @@
 
 Sales, Inventory & Shop Management System
 
+## Local Administrator sign-in
+
+The current database is **schema 5, with 21 application tables**. Migration `005-administrator.sql` adds only a single-row `administrator` table (ID constrained to 1), leaving migrations 001–004 and existing business data unchanged. Older module notes below describe the schema at the time those modules were introduced.
+
+On first launch, or after upgrading a database without credentials, create the one local Administrator account using an email, password (at least 8 characters), and matching confirmation. Email is trimmed and lowercased; it is an offline identifier, not an externally verified address. Subsequent launches require sign-in. There are no default credentials, extra users, roles, cloud authentication, remember-me tokens, or password-recovery/master-password mechanisms in this release.
+
+Passwords are derived in the main process with asynchronous Node `crypto.scrypt` (N=32768, r=8, p=1), a random 32-byte salt, and a 64-byte key. Only normalized email, hex-encoded salt/hash, and creation timestamp are stored. Verification uses `timingSafeEqual`; neither hash nor salt crosses preload. Sessions exist only in main-process memory. Header **Logout**, full application exit, and database replacement revoke access.
+
+The renderer authentication boundary protects every route. A centralized main-process IPC guard also protects all business reads/writes, Settings, Printing, and Backup/Restore. The narrow auth API exposes `getStatus`, `setup`, `login`, `logout`, and a payload-free session-change subscription. Existing sender checks, context isolation, sandboxing, disabled Node integration, and CSP remain intact. Authentication controls application access; it does not encrypt the SQLite file or backups.
+
+Backups include the Administrator account. Restoring a schema-5 backup ends the current session and requires the restored credentials. Schema 1–4 backups migrate through 5 and show Administrator setup. Validation and safety backups remain in place. Keep backups secure; forgotten-password recovery is not provided.
+
+Run `npm run test:auth` and `npm run test:auth:ui` after building. Tests cover migration preservation/rollback, credentials, IPC authorization, full process restart, form validation/loading/logout/routes, and current/legacy backup restore. Existing UI regressions authenticate through the real setup/login API using randomly generated test credentials. All npm tests use temporary databases/profiles, never the real shop database.
+
 JavaScript, React, Vite, and Electron frontend foundation with Tailwind CSS v4, Material UI/Emotion, and React Router. Requires Node.js 22.12+ (Node 24 LTS recommended) and npm.
 
 ```sh
@@ -58,7 +72,7 @@ npm run test:electron
 
 These checks launch real Electron windows, visit all ten routes, check active navigation, reload a hash route, verify unknown-route fallback, styling, narrow-window layout, the preload bridge, absence of renderer Node globals, and security preferences. They save screenshots under ignored `artifacts/` and exit. They require a desktop session.
 
-They also verify database initialization in the main process, all 20 tables, WAL, foreign keys, integrity, persistence, constraints, stock auditing, historical costs, separate payments, migration rollback, and rejection of newer schema versions. Both npm smoke commands use temporary profiles/databases that are removed afterward; shop data is not migrated by automated verification.
+They also verify database initialization in the main process, all 21 tables, WAL, foreign keys, integrity, persistence, constraints, stock auditing, historical costs, separate payments, migration rollback, and rejection of newer schema versions. Both npm smoke commands use temporary profiles/databases that are removed afterward; shop data is not migrated by automated verification.
 
 ## Database foundation
 

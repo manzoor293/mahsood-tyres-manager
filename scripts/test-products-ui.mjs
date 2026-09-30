@@ -8,6 +8,8 @@ const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'mahsood-products-ui-'))
 const env = { ...process.env, MAHSOOD_UI_TEST_DATA: directory };
 delete env.ELECTRON_RUN_AS_NODE;
 const entry = process.argv.includes('--smoke') ? 'scripts/smoke.cjs'
+  : process.argv.includes('--auth-backend') ? 'scripts/test-auth.cjs'
+  : process.argv.includes('--auth-ui') ? 'scripts/test-auth-ui.cjs'
   : process.argv.includes('--status-backend') ? 'scripts/test-status.cjs'
   : process.argv.includes('--status-ui') ? 'scripts/test-status-ui.cjs'
   : process.argv.includes('--settings-backend') ? 'scripts/test-settings.cjs'

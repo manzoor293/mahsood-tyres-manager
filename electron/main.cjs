@@ -1,3 +1,5 @@
+const { createAuthService } = require('./services/auth.cjs');
+const { createAuthorizedIpc, registerAuthIpc } = require('./ipc/auth.cjs');
 const { app, BrowserWindow, session, ipcMain, dialog } = require('electron');
 const {createMaintenanceGate}=require('./ipc/maintenance.cjs');
 const {createSettingsService}=require('./services/settings.cjs');
@@ -71,7 +73,7 @@ async function createWindow() {
 
   const contents = window.webContents;
   allowedContents.add(contents);
-  contents.once('destroyed', () => allowedContents.delete(contents));
+  contents.once('destroyed', () => { allowedContents.delete(contents); authService?.invalidate(); });
 
   window.setMenuBarVisibility(false);
   window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
@@ -109,6 +111,7 @@ function bindBusinessIpc(database, ipcMain) {
 }
 
 let backupService;
+let authService;
 const primaryInstance = app.requestSingleInstanceLock();
 if (!primaryInstance) app.quit();
 app.on('second-instance', () => {
@@ -119,10 +122,21 @@ if (primaryInstance) app.whenReady().then(async () => {
   recoverInterruptedRestore(getDatabasePath(app));
   const database = initializeDatabase(app);
   const gate = createMaintenanceGate(ipcMain);
-  const reopen = () => { const db = initializeDatabase(app); bindBusinessIpc(db, gate.ipc); return db; };
-  bindBusinessIpc(database, gate.ipc);
+  const trusted = createSenderGuard(allowedContents, rendererUrl);
+  authService = createAuthService(() => initializeDatabase(app), () => {
+    for (const contents of allowedContents) if (!contents.isDestroyed()) contents.send('auth:changed');
+  });
+  const authorized = createAuthorizedIpc(gate.ipc, authService, trusted);
+  registerAuthIpc(gate.ipc, authService, trusted);
+  const reopen = () => {
+    const db = initializeDatabase(app);
+    authService.invalidate();
+    bindBusinessIpc(db, authorized);
+    return db;
+  };
+  bindBusinessIpc(database, authorized);
   backupService = createBackupService({ app, dialogs: dialog, getDatabase: () => initializeDatabase(app), closeDatabase, reopen, gate });
-  registerBackupIpc(ipcMain, backupService, createSenderGuard(allowedContents, rendererUrl));
+  registerBackupIpc(createAuthorizedIpc(ipcMain, authService, trusted), backupService, createSenderGuard(allowedContents, rendererUrl));
   console.log(`Database initialized (schema ${database.pragma('user_version', { simple: true })}): ${database.name}`);
   session.defaultSession.setPermissionRequestHandler((_contents, _permission, callback) => callback(false));
   session.defaultSession.setPermissionCheckHandler(() => false);

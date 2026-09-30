@@ -64,7 +64,7 @@ app.whenReady().then(()=>{
     const handlers=new Map();registerDashboardIpc({handle:(name,fn)=>handlers.set(name,fn)},service,(event)=>event.trusted);
     const handler=handlers.get('dashboard:getOverview');
     assert.equal(handler({trusted:false}).error.code,'FORBIDDEN');assert.equal(handler({trusted:true},{},{}).error.code,'VALIDATION');assert.equal(handler({trusted:true},{sql:'select 1'}).error.code,'VALIDATION');assert.equal(handler({trusted:true},filters).ok,true);
-    assert.equal(db.pragma('user_version',{simple:true}),4);assert.deepEqual(db.pragma('foreign_key_check'),[]);
+    assert.equal(db.pragma('user_version',{simple:true}),5);assert.deepEqual(db.pragma('foreign_key_check'),[]);
     db.close();db=openDatabase(filename,{readonly:true});service=createDashboardService(db,clock);assert.equal(service.getOverview(filters).summary.purchaseTotal,20019);
     db.close();db=openDatabase(filename);service=createDashboardService(db,clock);
     // More than JS-safe integer totals must fail explicitly rather than returning rounded money.

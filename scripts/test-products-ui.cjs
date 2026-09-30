@@ -28,6 +28,7 @@ const timeout = setTimeout(() => { console.error('FAIL: Products UI test timed o
 app.on('browser-window-created', (_event, window) => {
   window.webContents.on('preload-error', (_event, _path, error) => { console.error(error); app.exit(1); });
   window.webContents.once('did-finish-load', async () => {
+    await require('./auth-test-helper.cjs').authenticate(window);
     const evaluate = (code) => window.webContents.executeJavaScript(code);
     const wait = async (condition) => {
       for (let attempt = 0; attempt < 150; attempt += 1) {

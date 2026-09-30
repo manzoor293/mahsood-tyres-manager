@@ -127,7 +127,7 @@ app.whenReady().then(async () => {
       api.delete(rollback.id);
     }
     assert.equal(typeof services.products.delete, 'undefined');
-    assert.equal(database.pragma('user_version', { simple: true }), 4);
+    assert.equal(database.pragma('user_version', { simple: true }), 5);
     console.log('PASS: brand/category permanent deletion, active/inactive unused rows, counts including inactive products, unchanged database on rejection, stale references from another connection, FK protection and delete rollback.');
 
     const html = path.join(directory, 'ipc.html');

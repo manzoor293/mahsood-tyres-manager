@@ -28,7 +28,7 @@ app.whenReady().then(()=>{
     const protectedTables=['sales','sale_items','purchases','purchase_items','customer_payments','supplier_payments'];
     const snapshot=(conn,tables)=>Object.fromEntries(tables.map((table)=>[table,conn.prepare(`SELECT * FROM ${table} ORDER BY id`).all()]));
     const before=snapshot(legacy,protectedTables);legacy.close();legacy=null;db=openDatabase(filename);
-    assert.equal(db.pragma('user_version',{simple:true}),4);assert.deepEqual(snapshot(db,protectedTables),before);
+    assert.equal(db.pragma('user_version',{simple:true}), 5);assert.deepEqual(snapshot(db,protectedTables),before);
     const services=createReturnServices(db),service=services[resource],read=()=>service[purchase?'getReturnablePurchase':'getReturnableSale'](1);
     const data={ [`${kind}_id`]:1,returned_at:'2026-09-26',notes:'Return test',items:[{[`${kind}_item_id`]:1,quantity:1}]};
     assert.equal(service.list().totalRows,0);assert.throws(()=>service.getById(999));

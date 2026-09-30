@@ -23,8 +23,10 @@ let attached = false;
 app.on('browser-window-created', (_, window) => {
   if (attached) return; attached = true;
   seedBackup(initializeDatabase(app));
-  const expected = allData(initializeDatabase(app));
+  let expected;
   window.webContents.once('did-finish-load', async () => {
+    await require('./auth-test-helper.cjs').authenticate(window);
+    expected = allData(initializeDatabase(app));
     const evaluate = code => window.webContents.executeJavaScript(code);
     const wait = async condition => { for (let i = 0; i < 220; i++) { if (await evaluate(condition)) return; await new Promise(resolve => setTimeout(resolve, 50)); } throw Error(`Timed out: ${condition}`); };
     const button = label => `Array.from(document.querySelectorAll('button')).find(b=>b.textContent.trim()===${JSON.stringify(label)})`;
@@ -39,7 +41,7 @@ app.on('browser-window-created', (_, window) => {
     const save = async () => { releaseDialog = null; await click('Create Backup'); for (let i=0; !releaseDialog && i<100; i++) await new Promise(resolve => setTimeout(resolve, 30)); assert.ok(releaseDialog); };
     try {
       await evaluate('location.hash="/settings"'); await text('Loading database information...');
-      await text('Database Status: Healthy'); await text('Schema Version: 4'); await text('No recovery backups yet.');
+      await text('Database Status: Healthy'); await text('Schema Version: 5'); await text('No recovery backups yet.');
       await text('No backup created this session.');
       const keys = await evaluate('Object.keys(window.api.backup).sort()'); assert.deepEqual(keys, ['create', 'getInfo', 'restore']);
       assert.equal(await evaluate('typeof window.require'), 'undefined');
@@ -59,11 +61,11 @@ app.on('browser-window-created', (_, window) => {
       selected = path.join(root, 'invalid.sqlite3'); fs.writeFileSync(selected, 'invalid SQLite');
       await beginRestore(); await text('This file is invalid or damaged.'); assert.deepEqual(allData(initializeDatabase(app)), expected);
       selected = path.join(root, 'newer.sqlite3'); fs.copyFileSync(path.join(root, 'ui-backup.sqlite3'), selected);
-      const newer = new Database(selected); newer.pragma('user_version=5'); newer.close();
-      await beginRestore(); await text('This backup uses schema 5.'); assert.deepEqual(allData(initializeDatabase(app)), expected);
+      const newer = new Database(selected); newer.pragma('user_version=6'); newer.close();
+      await beginRestore(); await text('This backup uses schema 6.'); assert.deepEqual(allData(initializeDatabase(app)), expected);
       selected = path.join(root, 'ui-backup.sqlite3');
       initializeDatabase(app).exec("UPDATE products SET model='Changed in live database'; UPDATE settings SET value='Changed shop'");
-      await beginRestore(); await text('Backup restored successfully.'); await text('pre-restore-backup-');
+      await beginRestore(); await text('Sign in to Mahsood Tyre Manager'); await require('./auth-test-helper.cjs').authenticate(window); await text('pre-restore-backup-');
       assert.deepEqual(allData(initializeDatabase(app)), expected);
       // Actual main handlers must have fresh statements after the old connection was closed.
       const integration = await evaluate('(async()=>({product:await window.api.products.getById(1),sale:await window.api.sales.getById(1),purchase:await window.api.purchases.getById(1),dashboard:await window.api.dashboard.getOverview(),report:await window.api.reports.getReceivables(),history:await window.api.customerPayments.history()}))()');

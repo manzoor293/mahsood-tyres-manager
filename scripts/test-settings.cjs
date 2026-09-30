@@ -66,9 +66,9 @@ app.whenReady().then(async () => {
     }
     assert.equal(handlers.get('settings:updateShopProfile')({ trusted: true }, { name: '' }).error.code, 'VALIDATION');
     assert.deepEqual(handlers.get('settings:getShopProfile')({ trusted: true }).data, expected);
-    assert.equal(db.pragma('user_version', { simple: true }), 4);
-    assert.equal(db.prepare("SELECT count(*) AS count FROM sqlite_schema WHERE type='table' AND name NOT LIKE 'sqlite_%'").get().count, 20);
-    console.log('PASS Settings backend: defaults, validation/atomicity, normalization, reopen, IPC guards, six document previews/print/PDF payloads, historical amounts/cost exclusion, backup/restore, schema 4 and 20 tables.');
+    assert.equal(db.pragma('user_version', { simple: true }), 5);
+    assert.equal(db.prepare("SELECT count(*) AS count FROM sqlite_schema WHERE type='table' AND name NOT LIKE 'sqlite_%'").get().count, 21);
+    console.log('PASS Settings backend: defaults, validation/atomicity, normalization, reopen, IPC guards, six document previews/print/PDF payloads, historical amounts/cost exclusion, backup/restore, schema 5 and 21 tables.');
   } catch (error) { code = 1; console.error(error); }
   finally { if (db?.open) db.close(); app.exit(code); }
 });

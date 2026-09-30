@@ -14,6 +14,7 @@ app.setPath('userData',process.env.MAHSOOD_UI_TEST_DATA); app.setPath('sessionDa
 const timeout = setTimeout(() => { console.error('Sales UI timeout'); app.exit(1); },120000);
 app.on('browser-window-created', (_,window) => {
   window.webContents.once('did-finish-load', async () => {
+    await require('./auth-test-helper.cjs').authenticate(window);
     const db = initializeDatabase(app);
     const service = createSaleService(db);
     const evaluate = (code) => window.webContents.executeJavaScript(code);

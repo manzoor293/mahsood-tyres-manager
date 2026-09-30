@@ -1,6 +1,7 @@
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import { HashRouter } from 'react-router-dom';
 import AppRoutes from './routes/AppRoutes.jsx';
+import AuthBoundary from './context/AuthContext.jsx';
 
 const theme = createTheme({
   palette: {
@@ -15,7 +16,7 @@ const theme = createTheme({
 export default function App() {
   return (
     <ThemeProvider theme={theme}>
-      <HashRouter><AppRoutes /></HashRouter>
+      <HashRouter><AuthBoundary><AppRoutes /></AuthBoundary></HashRouter>
     </ThemeProvider>
   );
 }

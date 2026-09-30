@@ -21,6 +21,7 @@ app.on('browser-window-created', (_event, window) => {
     app.exit(1);
   });
   window.webContents.once('did-finish-load', async () => {
+    await require('./auth-test-helper.cjs').authenticate(window);
     try {
       require('./verify-database.cjs').verifyDatabase(app);
       const catalog = await window.webContents.executeJavaScript(`(async () => ({

@@ -6,7 +6,7 @@ const { openDatabase, initializeDatabase } = require('../electron/database/index
 const { migrate, schemaVersion } = require('../electron/database/migrate.cjs');
 
 const expectedTables = [
-  'brands', 'categories', 'products', 'suppliers', 'customers', 'purchases',
+  'administrator', 'brands', 'categories', 'products', 'suppliers', 'customers', 'purchases',
   'purchase_items', 'sales', 'sale_items', 'inventory', 'stock_movements',
   'supplier_payments', 'customer_payments', 'expense_categories', 'expenses', 'settings', 'sale_returns', 'sale_return_items', 'purchase_returns', 'purchase_return_items',
 ].sort();
@@ -82,7 +82,7 @@ function verifyDatabase(app) {
     assert.throws(() => migrate(database), /already exists/);
     assert.equal(database.prepare("SELECT COUNT(*) AS count FROM sqlite_schema WHERE name = 'brands'").get().count, 0);
     assert.equal(database.pragma('user_version', { simple: true }), 0);
-    console.log(`PASS database: 20 tables, constraints, stock ledger, historical costs, payments, reopen, migration rollback and newer-version rejection. Application database: ${applicationDatabase.name}`);
+    console.log(`PASS database: 21 tables, constraints, stock ledger, historical costs, payments, reopen, migration rollback and newer-version rejection. Application database: ${applicationDatabase.name}`);
   } finally {
     if (database?.open) database.close();
     // Only the unique directory created above is removed.

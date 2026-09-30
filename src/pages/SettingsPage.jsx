@@ -4,7 +4,6 @@ import { catalogRequest } from '../utils/catalog.js';
 import ShopProfileForm from '../components/settings/ShopProfileForm.jsx';
 
 export default function SettingsPage() {
-  const [profileRevision, setProfileRevision] = useState(0);
   const [profileSaving, setProfileSaving] = useState(false);
   const [info, setInfo] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -28,7 +27,8 @@ export default function SettingsPage() {
     pending.current = true; setBusy(method); setError(''); setNotice(null); setConfirm(false);
     try {
       const result = await catalogRequest(() => window.api.backup[method]());
-      if (method === 'restore' && !result.canceled) setProfileRevision(value => value + 1);
+      // Restore invalidates authentication and unmounts the business views.
+      if (method === 'restore' && !result.canceled) return;
       setNotice(result.canceled ? { severity: 'info', text: 'Operation cancelled.' }
         : { severity: 'success', text: method === 'create' ? `Backup created: ${result.name}` : 'Backup restored successfully. All modules now use the restored data. A safety backup of your previous data has been retained.' });
       await refresh();
@@ -38,7 +38,7 @@ export default function SettingsPage() {
   const disabled = loading || Boolean(busy) || profileSaving || !info;
   return <section className="mx-auto min-w-0 max-w-4xl" aria-labelledby="page-title">
     <h1 id="page-title" className="text-3xl font-semibold">Settings</h1>
-    <ShopProfileForm key={profileRevision} maintenanceBusy={Boolean(busy)} onSavingChange={setProfileSaving}/>
+    <ShopProfileForm maintenanceBusy={Boolean(busy)} onSavingChange={setProfileSaving}/>
     <Paper variant="outlined" sx={{ mt: 3, p: { xs: 2, sm: 3 }, overflowWrap: 'anywhere' }}>
       <h2 className="text-xl font-semibold">Data Backup &amp; Restore</h2>
       <p className="my-3 text-sm text-slate-600">Save a complete local copy of your shop data. Keep important backups on a separate drive.</p>

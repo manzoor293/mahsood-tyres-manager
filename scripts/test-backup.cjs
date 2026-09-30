@@ -21,7 +21,7 @@ app.whenReady().then(async () => {
     db = openDatabase(filename);
     seedBackup(db);
     const expected = allData(db);
-    assert.equal(Object.keys(expected).filter(name => !name.startsWith('sqlite_')).length, 20);
+    assert.equal(Object.keys(expected).filter(name => !name.startsWith('sqlite_')).length, 21);
     let selected = path.join(root, 'backup.sqlite3'), canceled = false, confirm = true, pause = null, failRename = false, failReopen = false, failMigration = false;
     const handlers = new Map();
     const gate = createMaintenanceGate({ handle: (name, fn) => handlers.set(name, fn), removeHandler: name => handlers.delete(name) });
@@ -37,9 +37,9 @@ app.whenReady().then(async () => {
         showMessageBox: async options => { assert.equal(options.defaultId, 0); return { response: confirm ? 1 : 0 }; },
       },
     });
-    assert.equal(service.getInfo().schemaVersion, 4);
+    assert.equal(service.getInfo().schemaVersion, 5);
     assert.equal((await service.create()).canceled, false);
-    assert.deepEqual(allData(db), expected); assert.equal(inspectFile(selected), 4);
+    assert.deepEqual(allData(db), expected); assert.equal(inspectFile(selected), 5);
     let backup = new Database(selected, { readonly: true }); assert.deepEqual(allData(backup), expected); backup.close();
     assert.equal(fs.existsSync(selected + '-wal'), false);
     db.prepare('UPDATE products SET model=?').run('Changed after backup');
@@ -95,7 +95,7 @@ app.whenReady().then(async () => {
       else {
         fs.copyFileSync(validFile, selected);
         if (kind === 'corrupt') fs.truncateSync(selected, 300);
-        else { const file = new Database(selected); if (kind === 'newer') file.pragma('user_version=5');
+        else { const file = new Database(selected); if (kind === 'newer') file.pragma('user_version=6');
           if (kind === 'foreign-key') { file.pragma('foreign_keys=OFF'); file.exec('UPDATE products SET brand_id=999'); }
           if (kind === 'unexpected-trigger') file.exec('CREATE TRIGGER unexpected AFTER INSERT ON settings BEGIN DELETE FROM products; END');
           file.close(); }
@@ -110,11 +110,11 @@ app.whenReady().then(async () => {
     failReopen = true; await assert.rejects(service.restore(), /reopen failure/); assert.deepEqual(allData(db), preserved);
     // Test each supported older schema through the actual forward migrations.
     const migrationFiles = fs.readdirSync(path.join(__dirname, '../electron/database/migrations')).sort();
-    for (const version of [1, 2, 3]) {
+    for (const version of [1, 2, 3, 4]) {
       selected = path.join(root, `old-${version}.sqlite3`); const old = new Database(selected);
       for (const file of migrationFiles.slice(0, version)) old.exec(fs.readFileSync(path.join(__dirname, '../electron/database/migrations', file), 'utf8'));
       old.pragma(`user_version=${version}`); old.exec("INSERT INTO settings(key,value) VALUES('old','preserved')"); old.close();
-      await service.restore(); assert.equal(db.pragma('user_version', { simple: true }), 4); assert.equal(db.prepare("SELECT value FROM settings WHERE key='old'").get().value, 'preserved');
+      await service.restore(); assert.equal(db.pragma('user_version', { simple: true }), 5); assert.equal(db.prepare("SELECT value FROM settings WHERE key='old'").get().value, 'preserved');
     }
     // Simulate process interruption after each rename, including stale sidecars for the replacement.
     selected = validFile; await service.restore();
@@ -138,7 +138,7 @@ app.whenReady().then(async () => {
     const ipc = new Map(); registerBackupIpc({ handle: (name, fn) => ipc.set(name, fn) }, service, event => event.trusted);
     for (const handler of ipc.values()) { assert.equal((await handler({ trusted: false })).error.code, 'FORBIDDEN'); assert.equal((await handler({ trusted: true }, 'arbitrary/path')).error.code, 'VALIDATION'); }
     assert.equal(service.getInfo().status, 'Healthy');
-    console.log('PASS Backup backend: integrity/schema, unchanged live WAL data, safety backups, cancellations, concurrency/business lock, protected paths/hardlinks, invalid/corrupt/unrelated/newer/FK/trigger rejection, migrations 1–3 → 4, migration/replacement/reopen failures, interrupted replacement and stale sidecar recovery, IPC guards.');
+    console.log('PASS Backup backend: integrity/schema, unchanged live WAL data, safety backups, cancellations, concurrency/business lock, protected paths/hardlinks, invalid/corrupt/unrelated/newer/FK/trigger rejection, migrations 1–4 → 5, migration/replacement/reopen failures, interrupted replacement and stale sidecar recovery, IPC guards.');
   } catch (error) { code = 1; console.error(error); }
   finally { if (db?.open) db.close(); app.exit(code); }
 });
