@@ -1,19 +1,26 @@
-const { app, ipcMain } = require('electron');
-const assert = require('node:assert/strict');
-const fs = require('node:fs');
-const path = require('node:path');
-const { pathToFileURL } = require('node:url');
-const { initializeDatabase } = require('../electron/database/index.cjs');
-const { createCatalogServices } = require('../electron/services/catalog.cjs');
-const { registerCatalogIpc, createSenderGuard } = require('../electron/ipc/catalog.cjs');
+const { app, ipcMain } = require("electron");
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
+const { pathToFileURL } = require("node:url");
+const { initializeDatabase } = require("../electron/database/index.cjs");
+const { createCatalogServices } = require("../electron/services/catalog.cjs");
+const {
+  registerCatalogIpc,
+  createSenderGuard,
+} = require("../electron/ipc/catalog.cjs");
 
-if (!process.env.MAHSOOD_UI_TEST_DATA) throw new Error('Use npm run test:lookups:ui for an isolated database.');
-app.setPath('userData', process.env.MAHSOOD_UI_TEST_DATA);
-app.setPath('sessionData', process.env.MAHSOOD_UI_TEST_DATA);
-const timeout = setTimeout(() => { console.error('FAIL: Lookup UI test timed out'); app.exit(1); }, 60000);
-app.on('browser-window-created', (_event, window) => {
-  window.webContents.once('did-finish-load', async () => {
-    await require('./auth-test-helper.cjs').authenticate(window);
+if (!process.env.MAHSOOD_UI_TEST_DATA)
+  throw new Error("Use npm run test:lookups:ui for an isolated database.");
+app.setPath("userData", process.env.MAHSOOD_UI_TEST_DATA);
+app.setPath("sessionData", process.env.MAHSOOD_UI_TEST_DATA);
+const timeout = setTimeout(() => {
+  console.error("FAIL: Lookup UI test timed out");
+  app.exit(1);
+}, 60000);
+app.on("browser-window-created", (_event, window) => {
+  window.webContents.once("did-finish-load", async () => {
+    await require("./auth-test-helper.cjs").authenticate(window);
     const database = initializeDatabase(app);
     const evaluate = (code) => window.webContents.executeJavaScript(code);
     const wait = async (condition) => {
@@ -39,168 +46,360 @@ app.on('browser-window-created', (_event, window) => {
     const managerText = `document.querySelector('[aria-labelledby="lookup-manager-title"]')?.textContent`;
     const noDialogs = `!document.querySelector('[role="dialog"]')`;
     async function checkOption(field, name, present = true) {
-      await click('Add Product');
+      await click("Add Product");
       await wait(`Boolean(document.querySelector('[name="${field}"]'))`);
-      assert.equal(await evaluate(`Array.from(document.querySelector('[name="${field}"]').options).some(o => o.textContent === ${JSON.stringify(name)})`), present);
-      await click('Cancel');
+      assert.equal(
+        await evaluate(
+          `Array.from(document.querySelector('[name="${field}"]').options).some(o => o.textContent === ${JSON.stringify(name)})`,
+        ),
+        present,
+      );
+      await click("Cancel");
       await wait(noDialogs);
     }
     try {
       await evaluate('location.hash = "/products"');
-      await wait(`document.querySelector('h1')?.textContent === 'Products / Tyres'`);
+      await wait(
+        `document.querySelector('h1')?.textContent === 'Products / Tyres'`,
+      );
       const records = {};
-      for (const [resource, singular, plural, field] of [['brands', 'Brand', 'Brands', 'brand_id'], ['categories', 'Category', 'Categories', 'category_id']]) {
+      for (const [resource, singular, plural, field] of [
+        ["brands", "Brand", "Brands", "brand_id"],
+        ["categories", "Category", "Categories", "category_id"],
+      ]) {
         await click(`Manage ${plural}`);
         await wait(`${managerText}?.includes('No ${resource} found')`);
         await click(`Add ${singular}`);
         await wait(`${managerText}?.includes('Enter a name between')`);
-        await input('lookup-name', `UI ${singular}`);
+        await input("lookup-name", `UI ${singular}`);
         await click(`Add ${singular}`);
-        await wait(`${managerText}?.includes('${singular} added.') && Boolean(document.querySelector('[data-lookup-id]'))`);
-        const row = database.prepare(`SELECT * FROM ${resource} WHERE name=?`).get(`UI ${singular}`);
+        await wait(
+          `${managerText}?.includes('${singular} added.') && Boolean(document.querySelector('[data-lookup-id]'))`,
+        );
+        const row = database
+          .prepare(`SELECT * FROM ${resource} WHERE name=?`)
+          .get(`UI ${singular}`);
         assert.equal(row.active, 1);
         records[resource] = row;
-        await click('Done');
+        await click("Done");
         await wait(noDialogs);
         await checkOption(field, `UI ${singular}`);
 
         await click(`Manage ${plural}`);
         await wait(`Boolean(document.querySelector('[data-lookup-id]'))`);
-        await input('lookup-name', `ui ${singular.toLowerCase()}`);
+        await input("lookup-name", `ui ${singular.toLowerCase()}`);
         await click(`Add ${singular}`);
         await wait(`${managerText}?.includes('already exists')`);
-        assert.equal(database.prepare(`SELECT COUNT(*) AS n FROM ${resource}`).get().n, 1);
+        assert.equal(
+          database.prepare(`SELECT COUNT(*) AS n FROM ${resource}`).get().n,
+          1,
+        );
         await click(`Edit ${singular.toLowerCase()} UI ${singular}`);
-        await input('lookup-name', `Renamed ${singular}`);
+        await input("lookup-name", `Renamed ${singular}`);
         await click(`Save ${singular}`);
-        await wait(`${managerText}?.includes('${singular} updated.') && document.querySelector('[data-lookup-id]')?.textContent.includes('Renamed ${singular}')`);
-        assert.equal(database.prepare(`SELECT name FROM ${resource} WHERE id=?`).get(row.id).name, `Renamed ${singular}`);
-        await click('Done');
+        await wait(
+          `${managerText}?.includes('${singular} updated.') && document.querySelector('[data-lookup-id]')?.textContent.includes('Renamed ${singular}')`,
+        );
+        assert.equal(
+          database
+            .prepare(`SELECT name FROM ${resource} WHERE id=?`)
+            .get(row.id).name,
+          `Renamed ${singular}`,
+        );
+        await click("Done");
         await wait(noDialogs);
         await checkOption(field, `Renamed ${singular}`);
-        assert.ok(await evaluate(`document.querySelector('[name="filter-${resource === 'brands' ? 'brand' : 'category'}"]').textContent.includes('Renamed ${singular}')`));
+        assert.ok(
+          await evaluate(
+            `document.querySelector('[name="filter-${resource === "brands" ? "brand" : "category"}"]').textContent.includes('Renamed ${singular}')`,
+          ),
+        );
       }
       // The fixture product exists only in the runner's temporary userData database.
-      const created = await evaluate(`window.api.products.create({sku:'LINK-TEST',brand_id:${records.brands.id},category_id:${records.categories.id},model:'Temporary',size:'R15'})`);
+      const created = await evaluate(
+        `window.api.products.create({sku:'LINK-TEST',brand_id:${records.brands.id},category_id:${records.categories.id},model:'Temporary',size:'R15'})`,
+      );
       assert.equal(created.ok, true);
-      for (const [resource, singular, plural, field] of [['brands', 'Brand', 'Brands', 'brand_id'], ['categories', 'Category', 'Categories', 'category_id']]) {
+      for (const [resource, singular, plural, field] of [
+        ["brands", "Brand", "Brands", "brand_id"],
+        ["categories", "Category", "Categories", "category_id"],
+      ]) {
         await click(`Manage ${plural}`);
         await wait(`Boolean(document.querySelector('[data-lookup-id]'))`);
         await click(`Deactivate ${singular.toLowerCase()} Renamed ${singular}`);
-        await wait(`Boolean(document.querySelector('[aria-labelledby="lookup-confirm-title"]'))`);
-        await click('Cancel');
-        await wait(`!document.querySelector('[aria-labelledby="lookup-confirm-title"]')`);
-        assert.equal(database.prepare(`SELECT active FROM ${resource} WHERE id=?`).get(records[resource].id).active, 1);
+        await wait(
+          `Boolean(document.querySelector('[aria-labelledby="lookup-confirm-title"]'))`,
+        );
+        await click("Cancel");
+        await wait(
+          `!document.querySelector('[aria-labelledby="lookup-confirm-title"]')`,
+        );
+        assert.equal(
+          database
+            .prepare(`SELECT active FROM ${resource} WHERE id=?`)
+            .get(records[resource].id).active,
+          1,
+        );
         await click(`Deactivate ${singular.toLowerCase()} Renamed ${singular}`);
         await click(`Deactivate ${singular}`);
-        await wait(`${managerText}?.includes('${singular} deactivated.') && document.querySelector('[data-lookup-id]')?.textContent.includes('Inactive')`);
-        assert.equal(database.prepare(`SELECT active FROM ${resource} WHERE id=?`).get(records[resource].id).active, 0);
-        await input('lookup-status', 'active');
+        await wait(
+          `${managerText}?.includes('${singular} deactivated.') && document.querySelector('[data-lookup-id]')?.textContent.includes('Inactive')`,
+        );
+        assert.equal(
+          database
+            .prepare(`SELECT active FROM ${resource} WHERE id=?`)
+            .get(records[resource].id).active,
+          0,
+        );
+        await input("lookup-status", "active");
         await wait(`${managerText}?.includes('No ${resource} found')`);
-        await input('lookup-status', 'inactive');
-        await wait(`document.querySelector('[data-lookup-id]')?.textContent.includes('Inactive')`);
+        await input("lookup-status", "inactive");
+        await wait(
+          `document.querySelector('[data-lookup-id]')?.textContent.includes('Inactive')`,
+        );
         // Inactive rows remain editable; editing must not reactivate them.
         await click(`Edit ${singular.toLowerCase()} Renamed ${singular}`);
-        await input('lookup-name', `Archived ${singular}`);
+        await input("lookup-name", `Archived ${singular}`);
         await click(`Save ${singular}`);
-        await wait(`document.querySelector('[data-lookup-id]')?.textContent.includes('Archived ${singular}')`);
-        assert.equal(database.prepare(`SELECT active FROM ${resource} WHERE id=?`).get(records[resource].id).active, 0);
-        await click('Done');
+        await wait(
+          `document.querySelector('[data-lookup-id]')?.textContent.includes('Archived ${singular}')`,
+        );
+        assert.equal(
+          database
+            .prepare(`SELECT active FROM ${resource} WHERE id=?`)
+            .get(records[resource].id).active,
+          0,
+        );
+        await click("Done");
         await wait(noDialogs);
         await checkOption(field, `Archived ${singular}`, false);
-        assert.equal(database.prepare(`SELECT ${field} AS link FROM products WHERE id=?`).get(created.data.id).link, records[resource].id);
+        assert.equal(
+          database
+            .prepare(`SELECT ${field} AS link FROM products WHERE id=?`)
+            .get(created.data.id).link,
+          records[resource].id,
+        );
       }
       await wait(`Boolean(document.querySelector('[data-product-id]'))`);
-      await click('Edit LINK-TEST');
+      await click("Edit LINK-TEST");
       await wait(`Boolean(document.querySelector('[name="brand_id"]'))`);
-      assert.ok(await evaluate(`document.querySelector('[name="brand_id"]').selectedOptions[0].textContent === 'Archived Brand (inactive)'`));
-      assert.ok(await evaluate(`document.querySelector('[name="category_id"]').selectedOptions[0].textContent === 'Archived Category (inactive)'`));
-      await click('Cancel');
+      assert.ok(
+        await evaluate(
+          `document.querySelector('[name="brand_id"]').selectedOptions[0].textContent === 'Archived Brand (inactive)'`,
+        ),
+      );
+      assert.ok(
+        await evaluate(
+          `document.querySelector('[name="category_id"]').selectedOptions[0].textContent === 'Archived Category (inactive)'`,
+        ),
+      );
+      await click("Cancel");
       await wait(noDialogs);
 
-      for (const [resource, singular, plural, field] of [['brands','Brand','Brands','brand_id'], ['categories','Category','Categories','category_id']]) {
+      for (const [resource, singular, plural, field] of [
+        ["brands", "Brand", "Brands", "brand_id"],
+        ["categories", "Category", "Categories", "category_id"],
+      ]) {
         await click(`Manage ${plural}`);
         await wait(`Boolean(document.querySelector('[data-lookup-id]'))`);
         await click(`Activate ${singular.toLowerCase()} Archived ${singular}`);
-        await wait(`document.querySelector('[data-lookup-id]')?.textContent.includes('Active')`);
-        await input('lookup-status', 'inactive');
+        await wait(
+          `document.querySelector('[data-lookup-id]')?.textContent.includes('Active')`,
+        );
+        await input("lookup-status", "inactive");
         await wait(`${managerText}?.includes('No ${resource} found')`);
-        await input('lookup-status', 'active');
+        await input("lookup-status", "active");
         await wait(`Boolean(document.querySelector('[data-lookup-id]'))`);
-        const linkedBefore = database.prepare(`SELECT * FROM ${resource} WHERE id=?`).get(records[resource].id);
-        const productBefore = database.prepare('SELECT * FROM products WHERE id=?').get(created.data.id);
+        const linkedBefore = database
+          .prepare(`SELECT * FROM ${resource} WHERE id=?`)
+          .get(records[resource].id);
+        const productBefore = database
+          .prepare("SELECT * FROM products WHERE id=?")
+          .get(created.data.id);
         await click(`Delete ${singular.toLowerCase()} Archived ${singular}`);
-        await wait(`Boolean(document.querySelector('[aria-labelledby="lookup-delete-title"]'))`);
-        assert.ok(await evaluate(`Array.from(document.querySelectorAll('button')).find(b => b.textContent === 'Delete permanently').disabled`));
-        await evaluate(`document.querySelector('[aria-labelledby="lookup-delete-title"] input[type="checkbox"]').click()`);
-        await click('Delete permanently');
-        await wait(`document.querySelector('[aria-labelledby="lookup-delete-title"]')?.textContent.includes('used by 1 product.')`);
-        assert.deepEqual(database.prepare(`SELECT * FROM ${resource} WHERE id=?`).get(records[resource].id), linkedBefore);
-        assert.deepEqual(database.prepare('SELECT * FROM products WHERE id=?').get(created.data.id), productBefore);
-        await evaluate(`Array.from(document.querySelector('[aria-labelledby="lookup-delete-title"]').querySelectorAll('button')).find(b => b.textContent === 'Cancel').click()`);
-        await wait(`!document.querySelector('[aria-labelledby="lookup-delete-title"]')`);
+        await wait(
+          `Boolean(document.querySelector('[aria-labelledby="lookup-delete-title"]'))`,
+        );
+        assert.ok(
+          await evaluate(
+            `Array.from(document.querySelectorAll('button')).find(b => b.textContent === 'Delete permanently').disabled`,
+          ),
+        );
+        await evaluate(
+          `document.querySelector('[aria-labelledby="lookup-delete-title"] input[type="checkbox"]').click()`,
+        );
+        await click("Delete permanently");
+        await wait(
+          `document.querySelector('[aria-labelledby="lookup-delete-title"]')?.textContent.includes('used by 1 product.')`,
+        );
+        assert.deepEqual(
+          database
+            .prepare(`SELECT * FROM ${resource} WHERE id=?`)
+            .get(records[resource].id),
+          linkedBefore,
+        );
+        assert.deepEqual(
+          database
+            .prepare("SELECT * FROM products WHERE id=?")
+            .get(created.data.id),
+          productBefore,
+        );
+        await evaluate(
+          `Array.from(document.querySelector('[aria-labelledby="lookup-delete-title"]').querySelectorAll('button')).find(b => b.textContent === 'Cancel').click()`,
+        );
+        await wait(
+          `!document.querySelector('[aria-labelledby="lookup-delete-title"]')`,
+        );
 
         for (const inactive of [false, true]) {
-          await input('lookup-status', 'all');
-          await input('lookup-name', `Accidental ${singular}`);
+          await input("lookup-status", "all");
+          await input("lookup-name", `Accidental ${singular}`);
           await click(`Add ${singular}`);
-          await wait(`${managerText}?.includes('${singular} added.') && document.querySelectorAll('[data-lookup-id]').length === 2`);
-          const unused = database.prepare(`SELECT * FROM ${resource} WHERE name=?`).get(`Accidental ${singular}`);
+          await wait(
+            `${managerText}?.includes('${singular} added.') && document.querySelectorAll('[data-lookup-id]').length === 2`,
+          );
+          const unused = database
+            .prepare(`SELECT * FROM ${resource} WHERE name=?`)
+            .get(`Accidental ${singular}`);
           if (inactive) {
-            await click(`Deactivate ${singular.toLowerCase()} Accidental ${singular}`);
+            await click(
+              `Deactivate ${singular.toLowerCase()} Accidental ${singular}`,
+            );
             await click(`Deactivate ${singular}`);
-            await wait(`document.querySelector('[data-lookup-id="${unused.id}"]')?.textContent.includes('Inactive')`);
+            await wait(
+              `document.querySelector('[data-lookup-id="${unused.id}"]')?.textContent.includes('Inactive')`,
+            );
           }
-          await click(`Delete ${singular.toLowerCase()} Accidental ${singular}`);
-          await wait(`document.querySelector('[aria-labelledby="lookup-delete-title"]')?.textContent.includes('This cannot be undone.')`);
-          await evaluate(`Array.from(document.querySelector('[aria-labelledby="lookup-delete-title"]').querySelectorAll('button')).find(b => b.textContent === 'Cancel').click()`);
-          await wait(`!document.querySelector('[aria-labelledby="lookup-delete-title"]')`);
-          assert.ok(database.prepare(`SELECT * FROM ${resource} WHERE id=?`).get(unused.id));
-          await click(`Delete ${singular.toLowerCase()} Accidental ${singular}`);
-          await wait(`Boolean(document.querySelector('[aria-labelledby="lookup-delete-title"]'))`);
-          assert.ok(await evaluate(`Array.from(document.querySelectorAll('button')).find(b => b.textContent === 'Delete permanently').disabled`));
-          await evaluate(`document.querySelector('[aria-labelledby="lookup-delete-title"] input[type="checkbox"]').click()`);
-          await click('Delete permanently');
-          await wait(`${managerText}?.includes('${singular} permanently deleted.') && !document.querySelector('[data-lookup-id="${unused.id}"]')`);
-          assert.equal(database.prepare(`SELECT * FROM ${resource} WHERE id=?`).get(unused.id), undefined);
+          await click(
+            `Delete ${singular.toLowerCase()} Accidental ${singular}`,
+          );
+          await wait(
+            `document.querySelector('[aria-labelledby="lookup-delete-title"]')?.textContent.includes('This cannot be undone.')`,
+          );
+          await evaluate(
+            `Array.from(document.querySelector('[aria-labelledby="lookup-delete-title"]').querySelectorAll('button')).find(b => b.textContent === 'Cancel').click()`,
+          );
+          await wait(
+            `!document.querySelector('[aria-labelledby="lookup-delete-title"]')`,
+          );
+          assert.ok(
+            database
+              .prepare(`SELECT * FROM ${resource} WHERE id=?`)
+              .get(unused.id),
+          );
+          await click(
+            `Delete ${singular.toLowerCase()} Accidental ${singular}`,
+          );
+          await wait(
+            `Boolean(document.querySelector('[aria-labelledby="lookup-delete-title"]'))`,
+          );
+          assert.ok(
+            await evaluate(
+              `Array.from(document.querySelectorAll('button')).find(b => b.textContent === 'Delete permanently').disabled`,
+            ),
+          );
+          await evaluate(
+            `document.querySelector('[aria-labelledby="lookup-delete-title"] input[type="checkbox"]').click()`,
+          );
+          await click("Delete permanently");
+          await wait(
+            `${managerText}?.includes('${singular} permanently deleted.') && !document.querySelector('[data-lookup-id="${unused.id}"]')`,
+          );
+          assert.equal(
+            database
+              .prepare(`SELECT * FROM ${resource} WHERE id=?`)
+              .get(unused.id),
+            undefined,
+          );
         }
-        await click('Done'); await wait(noDialogs);
+        await click("Done");
+        await wait(noDialogs);
         await checkOption(field, `Accidental ${singular}`, false);
         await checkOption(field, `Archived ${singular}`);
       }
-      console.log('PASS: Brand/Category deletion confirmation, acknowledgement reset, cancellation, active/inactive unused deletion, immediate list/options refresh, referenced rejection with preserved rows, and reactivation filters.');
+      console.log(
+        "PASS: Brand/Category deletion confirmation, acknowledgement reset, cancellation, active/inactive unused deletion, immediate list/options refresh, referenced rejection with preserved rows, and reactivation filters.",
+      );
 
-      ipcMain.removeHandler('catalog:brands:list');
-      ipcMain.handle('catalog:brands:list', async () => {
+      ipcMain.removeHandler("catalog:brands:list");
+      ipcMain.handle("catalog:brands:list", async () => {
         await new Promise((resolve) => setTimeout(resolve, 300));
-        return { ok: false, error: { code: 'INTERNAL', message: 'Temporary lookup test failure' } };
+        return {
+          ok: false,
+          error: { code: "INTERNAL", message: "Temporary lookup test failure" },
+        };
       });
-      await click('Manage Brands');
+      await click("Manage Brands");
       await wait(`${managerText}?.includes('Loading brands')`);
       await wait(`${managerText}?.includes('Temporary lookup test failure')`);
-      for (const [resource, methods] of Object.entries({ brands: ['list','create','update','deactivate','activate','delete'], categories: ['list','create','update','deactivate','activate','delete'], products: ['list','getById','create','update','deactivate','activate'] })) {
-        for (const method of methods) ipcMain.removeHandler(`catalog:${resource}:${method}`);
+      for (const [resource, methods] of Object.entries({
+        brands: [
+          "list",
+          "create",
+          "update",
+          "deactivate",
+          "activate",
+          "delete",
+        ],
+        categories: [
+          "list",
+          "create",
+          "update",
+          "deactivate",
+          "activate",
+          "delete",
+        ],
+        products: [
+          "list",
+          "getById",
+          "create",
+          "update",
+          "deactivate",
+          "activate",
+        ],
+      })) {
+        for (const method of methods)
+          ipcMain.removeHandler(`catalog:${resource}:${method}`);
       }
-      const url = process.argv.includes('--dev') ? 'http://127.0.0.1:5173/' : pathToFileURL(path.join(__dirname, '../dist/index.html')).href;
-      registerCatalogIpc(ipcMain, createCatalogServices(database), createSenderGuard(new Set([window.webContents]), url));
-      await click('Retry list');
-      await wait(`document.querySelector('[data-lookup-id]')?.textContent.includes('Archived Brand')`);
-      fs.mkdirSync(path.join(__dirname, '../artifacts'), { recursive: true });
-      fs.writeFileSync(path.join(__dirname, '../artifacts/lookups-ui.png'), (await window.webContents.capturePage()).toPNG());
+      const url = process.argv.includes("--dev")
+        ? "http://127.0.0.1:5173/"
+        : pathToFileURL(path.join(__dirname, "../dist/index.html")).href;
+      registerCatalogIpc(
+        ipcMain,
+        createCatalogServices(database),
+        createSenderGuard(new Set([window.webContents]), url),
+      );
+      await click("Retry list");
+      await wait(
+        `document.querySelector('[data-lookup-id]')?.textContent.includes('Archived Brand')`,
+      );
+      fs.mkdirSync(path.join(__dirname, "../artifacts"), { recursive: true });
+      fs.writeFileSync(
+        path.join(__dirname, "../artifacts/lookups-ui.png"),
+        (await window.webContents.capturePage()).toPNG(),
+      );
       window.setSize(640, 480);
       await new Promise((resolve) => setTimeout(resolve, 200));
-      assert.equal(await evaluate('document.documentElement.scrollWidth > innerWidth'), false);
-      assert.equal(await evaluate('typeof window.require'), 'undefined');
-      assert.deepEqual(database.pragma('foreign_key_check'), []);
-      console.log('PASS: Brand and Category UI add/edit/duplicate validation, cancel/confirm deactivation, status filters, inactive editing, live product options, retained product links, loading/empty/success/error/retry states, narrow layout.');
+      assert.equal(
+        await evaluate("document.documentElement.scrollWidth > innerWidth"),
+        false,
+      );
+      assert.equal(await evaluate("typeof window.require"), "undefined");
+      assert.deepEqual(database.pragma("foreign_key_check"), []);
+      console.log(
+        "PASS: Brand and Category UI add/edit/duplicate validation, cancel/confirm deactivation, status filters, inactive editing, live product options, retained product links, loading/empty/success/error/retry states, narrow layout.",
+      );
       clearTimeout(timeout);
       app.quit();
     } catch (error) {
-      console.error('FAIL:', error);
-      fs.mkdirSync(path.join(__dirname, '../artifacts'), { recursive: true });
-      fs.writeFileSync(path.join(__dirname, '../artifacts/lookups-ui-failure.png'), (await window.webContents.capturePage()).toPNG());
+      console.error("FAIL:", error);
+      fs.mkdirSync(path.join(__dirname, "../artifacts"), { recursive: true });
+      fs.writeFileSync(
+        path.join(__dirname, "../artifacts/lookups-ui-failure.png"),
+        (await window.webContents.capturePage()).toPNG(),
+      );
       app.exit(1);
     }
   });
 });
-require('../electron/main.cjs');
+require("../electron/main.cjs");

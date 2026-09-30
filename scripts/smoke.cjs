@@ -1,30 +1,33 @@
-const { app } = require('electron');
+const { app } = require("electron");
 if (process.env.MAHSOOD_UI_TEST_DATA) {
-  app.setPath('userData', process.env.MAHSOOD_UI_TEST_DATA);
-  app.setPath('sessionData', process.env.MAHSOOD_UI_TEST_DATA);
+  app.setPath("userData", process.env.MAHSOOD_UI_TEST_DATA);
+  app.setPath("sessionData", process.env.MAHSOOD_UI_TEST_DATA);
 }
-const assert = require('node:assert/strict');
-const fs = require('node:fs/promises');
-const path = require('node:path');
+const assert = require("node:assert/strict");
+const fs = require("node:fs/promises");
+const path = require("node:path");
 
 const timeout = setTimeout(() => {
-  console.error('FAIL: Electron verification did not finish within 60 seconds.');
+  console.error(
+    "FAIL: Electron verification did not finish within 60 seconds.",
+  );
   app.exit(1);
 }, 60000);
 
-app.on('browser-window-created', (_event, window) => {
-  window.webContents.on('console-message', (details) => {
-    if (details.level === 'error') console.error('Renderer:', details.message);
+app.on("browser-window-created", (_event, window) => {
+  window.webContents.on("console-message", (details) => {
+    if (details.level === "error") console.error("Renderer:", details.message);
   });
-  window.webContents.on('preload-error', (_event, _path, error) => {
+  window.webContents.on("preload-error", (_event, _path, error) => {
     console.error(error);
     app.exit(1);
   });
-  window.webContents.once('did-finish-load', async () => {
-    await require('./auth-test-helper.cjs').authenticate(window);
+  window.webContents.once("did-finish-load", async () => {
+    await require("./auth-test-helper.cjs").authenticate(window);
     try {
-      require('./verify-database.cjs').verifyDatabase(app);
-      const catalog = await window.webContents.executeJavaScript(`(async () => ({
+      require("./verify-database.cjs").verifyDatabase(app);
+      const catalog = await window.webContents
+        .executeJavaScript(`(async () => ({
         brands: await window.api.brands.list({limit:1}),
         backup: await window.api.backup.getInfo(),
         settings: await window.api.settings.getShopProfile(),
@@ -43,7 +46,10 @@ app.on('browser-window-created', (_event, window) => {
         inventory: await window.api.inventory.list({limit:1}),
         movements: await window.api.inventory.listMovements({limit:1})
       }))()`);
-      assert.ok(Object.values(catalog).every((result) => result.ok), JSON.stringify(catalog));
+      assert.ok(
+        Object.values(catalog).every((result) => result.ok),
+        JSON.stringify(catalog),
+      );
       let state;
       for (let attempt = 0; attempt < 100; attempt += 1) {
         state = await window.webContents.executeJavaScript(`({
@@ -56,12 +62,14 @@ app.on('browser-window-created', (_event, window) => {
         if (state.title && window.isVisible()) break;
         await new Promise((resolve) => setTimeout(resolve, 100));
       }
-      assert.equal(state.title, 'Dashboard');
-      assert.ok(state.header.includes('Mahsood Tyre Manager'));
-      assert.ok(state.header.includes('Sales, Inventory & Shop Management System'));
+      assert.equal(state.title, "Dashboard");
+      assert.ok(state.header.includes("Mahsood Tyre Manager"));
+      assert.ok(
+        state.header.includes("Sales, Inventory & Shop Management System"),
+      );
       assert.equal(state.desktop, true);
-      assert.equal(state.requireType, 'undefined');
-      assert.equal(state.processType, 'undefined');
+      assert.equal(state.requireType, "undefined");
+      assert.equal(state.processType, "undefined");
       assert.equal(window.isVisible(), true);
       const preferences = window.webContents.getLastWebPreferences();
       assert.equal(preferences.contextIsolation, true);
@@ -79,24 +87,43 @@ app.on('browser-window-created', (_event, window) => {
         throw new Error(`Route did not render: ${title}`);
       };
       const pages = [
-        ['dashboard', 'Dashboard'], ['products', 'Products / Tyres'],
-        ['suppliers', 'Suppliers'], ['purchases', 'Purchases'], ['sales', 'Sales / POS'],
-        ['inventory', 'Inventory'],
-        ['customers', 'Customers'], ['payments', 'Payments'], ['returns', 'Returns'], ['expenses', 'Expenses'], ['reports', 'Reports'], ['settings', 'Settings'],
+        ["dashboard", "Dashboard"],
+        ["products", "Products / Tyres"],
+        ["suppliers", "Suppliers"],
+        ["purchases", "Purchases"],
+        ["sales", "Sales / POS"],
+        ["inventory", "Inventory"],
+        ["customers", "Customers"],
+        ["payments", "Payments"],
+        ["returns", "Returns"],
+        ["expenses", "Expenses"],
+        ["reports", "Reports"],
+        ["settings", "Settings"],
       ];
       for (const [route, title] of pages) {
-        await window.webContents.executeJavaScript(`document.querySelector('nav a[href="#/${route}"]').click()`);
+        await window.webContents.executeJavaScript(
+          `document.querySelector('nav a[href="#/${route}"]').click()`,
+        );
         await waitForPage(title);
         assert.ok(window.webContents.getURL().endsWith(`#/${route}`));
       }
-      const reloaded = new Promise((resolve) => window.webContents.once('did-finish-load', resolve));
+      const reloaded = new Promise((resolve) =>
+        window.webContents.once("did-finish-load", resolve),
+      );
       window.webContents.reload();
       await reloaded;
-      await waitForPage('Settings');
-      await window.webContents.executeJavaScript('location.hash = "/unknown-route"');
-      await waitForPage('Dashboard');
+      await waitForPage("Settings");
+      await window.webContents.executeJavaScript(
+        'location.hash = "/unknown-route"',
+      );
+      await waitForPage("Dashboard");
       for (let attempt = 0; attempt < 100; attempt += 1) {
-        if (await window.webContents.executeJavaScript('Boolean(document.querySelector("[data-metric]"))')) break;
+        if (
+          await window.webContents.executeJavaScript(
+            'Boolean(document.querySelector("[data-metric]"))',
+          )
+        )
+          break;
         await new Promise((resolve) => setTimeout(resolve, 50));
       }
       const styles = await window.webContents.executeJavaScript(`({
@@ -104,8 +131,8 @@ app.on('browser-window-created', (_event, window) => {
         surface: getComputedStyle(document.querySelector('[data-metric]')).backgroundColor,
         overflow: document.documentElement.scrollWidth > innerWidth
       })`);
-      assert.equal(styles.sidebar, 'flex');
-      assert.equal(styles.surface, 'rgb(255, 255, 255)');
+      assert.equal(styles.sidebar, "flex");
+      assert.equal(styles.surface, "rgb(255, 255, 255)");
       assert.equal(styles.overflow, false);
       const verifyBranding = async () => {
         const brand = await window.webContents.executeJavaScript(`(async () => {
@@ -122,7 +149,7 @@ app.on('browser-window-created', (_event, window) => {
           };
         })()`);
         assert.equal(brand.loaded, true);
-        assert.equal(brand.fit, 'contain');
+        assert.equal(brand.fit, "contain");
         assert.equal(brand.business && brand.software && brand.fits, true);
       };
       await verifyBranding();
@@ -130,22 +157,37 @@ app.on('browser-window-created', (_event, window) => {
       await new Promise((resolve) => setTimeout(resolve, 300));
       const screenshot = await window.webContents.capturePage();
       assert.equal(screenshot.isEmpty(), false);
-      await fs.mkdir(path.join(__dirname, '../artifacts'), { recursive: true });
-      const mode = process.argv.includes('--dev') ? 'development' : 'production';
-      await fs.writeFile(path.join(__dirname, `../artifacts/${mode}.png`), screenshot.toPNG());
+      await fs.mkdir(path.join(__dirname, "../artifacts"), { recursive: true });
+      const mode = process.argv.includes("--dev")
+        ? "development"
+        : "production";
+      await fs.writeFile(
+        path.join(__dirname, `../artifacts/${mode}.png`),
+        screenshot.toPNG(),
+      );
       window.setSize(640, 480);
       await new Promise((resolve) => setTimeout(resolve, 250));
-      assert.equal(await window.webContents.executeJavaScript('document.documentElement.scrollWidth > innerWidth'), false);
+      assert.equal(
+        await window.webContents.executeJavaScript(
+          "document.documentElement.scrollWidth > innerWidth",
+        ),
+        false,
+      );
       await verifyBranding();
-      await fs.writeFile(path.join(__dirname, `../artifacts/${mode}-narrow.png`), (await window.webContents.capturePage()).toPNG());
-      console.log(`PASS (${mode}): all twelve routes, active navigation, hash reload, fallback, Tailwind/MUI styles, narrow window, preload bridge, isolation and sandbox.`);
+      await fs.writeFile(
+        path.join(__dirname, `../artifacts/${mode}-narrow.png`),
+        (await window.webContents.capturePage()).toPNG(),
+      );
+      console.log(
+        `PASS (${mode}): all twelve routes, active navigation, hash reload, fallback, Tailwind/MUI styles, narrow window, preload bridge, isolation and sandbox.`,
+      );
       clearTimeout(timeout);
       app.quit();
     } catch (error) {
-      console.error('FAIL:', error);
+      console.error("FAIL:", error);
       app.exit(1);
     }
   });
 });
 
-require('../electron/main.cjs');
+require("../electron/main.cjs");

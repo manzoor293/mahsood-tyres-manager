@@ -1,148 +1,358 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain } = require("electron");
 if (process.env.MAHSOOD_UI_TEST_DATA) {
-  app.setPath('userData', process.env.MAHSOOD_UI_TEST_DATA);
-  app.setPath('sessionData', process.env.MAHSOOD_UI_TEST_DATA);
+  app.setPath("userData", process.env.MAHSOOD_UI_TEST_DATA);
+  app.setPath("sessionData", process.env.MAHSOOD_UI_TEST_DATA);
 }
-const assert = require('node:assert/strict');
-const fs = require('node:fs');
-const os = require('node:os');
-const path = require('node:path');
-const { pathToFileURL } = require('node:url');
-const { openDatabase } = require('../electron/database/index.cjs');
-const { migrate, schemaVersion } = require('../electron/database/migrate.cjs');
-const { createCatalogServices } = require('../electron/services/catalog.cjs');
-const { registerCatalogIpc, createSenderGuard } = require('../electron/ipc/catalog.cjs');
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const os = require("node:os");
+const path = require("node:path");
+const { pathToFileURL } = require("node:url");
+const { openDatabase } = require("../electron/database/index.cjs");
+const { migrate, schemaVersion } = require("../electron/database/migrate.cjs");
+const { createCatalogServices } = require("../electron/services/catalog.cjs");
+const {
+  registerCatalogIpc,
+  createSenderGuard,
+} = require("../electron/ipc/catalog.cjs");
 
-const timeout = setTimeout(() => { console.error('FAIL: Catalog tests timed out.'); app.exit(1); }, 60000);
-app.whenReady().then(async () => {
-  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'mahsood-catalog-'));
-  let database;
-  let window;
-  let unregister;
-  let code = 0;
-  try {
-    // Test the real v1 -> v2 migration against existing catalog rows.
-    const Database = require('better-sqlite3');
-    database = new Database(path.join(directory, 'catalog.sqlite3'));
-    database.exec(fs.readFileSync(path.join(__dirname, '../electron/database/migrations/001-initial.sql'), 'utf8'));
-    database.exec("PRAGMA user_version = 1; INSERT INTO brands(name) VALUES ('Legacy'); INSERT INTO categories(name) VALUES ('Legacy');");
-    database.close();
-    database = openDatabase(path.join(directory, 'catalog.sqlite3'));
-    assert.equal(database.pragma('user_version', { simple: true }), schemaVersion);
-    assert.equal(database.prepare('SELECT active FROM brands WHERE id=1').get().active, 1);
-    assert.equal(database.prepare('SELECT updated_at = created_at AS same FROM categories WHERE id=1').get().same, 1);
-    migrate(database);
-    const services = createCatalogServices(database);
-    const brand = services.brands.create({ name: ' Michelin ' });
-    const category = services.categories.create({ name: 'Passenger' });
-    const data = { sku: 'TYRE-01', brand_id: brand.id, category_id: category.id, model: 'Primacy', size: '195/65 R15', default_selling_price: 1250050, minimum_stock: 2 };
-    const product = services.products.create(data);
-    assert.equal(product.stock_quantity, 0);
-    assert.equal(database.prepare('SELECT COUNT(*) AS n FROM inventory WHERE product_id=?').get(product.id).n, 1);
-    assert.equal(database.prepare('SELECT COUNT(*) AS n FROM stock_movements').get().n, 0);
-    const rejects = (action, code) => assert.throws(action, (error) => error.code === code);
-    rejects(() => services.products.create({ ...data, sku: 'tyre-01' }), 'CONFLICT');
-    for (const invalid of [
-      { sku: '' }, { model: ' ' }, { size: '' }, { brand_id: null }, { category_id: '2' },
-      { default_selling_price: -1 }, { default_selling_price: 1.5 }, { minimum_stock: -1 },
-      { minimum_stock: Number.MAX_SAFE_INTEGER + 1 }, { stock_quantity: 10 }, { active: 0 },
-    ]) rejects(() => services.products.create({ ...data, ...invalid }), 'VALIDATION');
-    for (const field of ['brand_id', 'category_id']) rejects(() => services.products.create({ ...data, [field]: 999 }), 'NOT_FOUND');
-    rejects(() => services.products.getById(999), 'NOT_FOUND');
-    rejects(() => services.products.update(product.id, {}), 'VALIDATION');
-    rejects(() => services.products.list({ limit: 501 }), 'VALIDATION');
-    rejects(() => services.products.list({ active: 1 }), 'VALIDATION');
-    for (const resource of ['brands', 'categories']) {
-      rejects(() => services[resource].create({ name: ' ' }), 'VALIDATION');
-      rejects(() => services[resource].update(999, { name: 'Missing' }), 'NOT_FOUND');
-      rejects(() => services[resource].deactivate(-1), 'VALIDATION');
-      rejects(() => services[resource].create({ name: 'legacy' }), 'CONFLICT');
-    }
-    for (const search of ['tyre-01', 'MICHELIN', 'primacy', '195/65']) assert.equal(services.products.list({ search }).length, 1);
-    for (const [field, term] of [['sku', 'TYRE'], ['brand', 'Michelin'], ['model', 'Prim'], ['size', 'R15']]) assert.equal(services.products.list({ [field]: term }).length, 1);
-    assert.equal(services.products.list({ search: "' OR 1=1 --" }).length, 0);
-    assert.equal(services.products.list({ search: '%' }).length, 0);
-    const second = services.products.create({ ...data, sku: 'TYRE-02' });
-    assert.equal(services.products.list({ limit: 1, offset: 1 })[0].id, second.id);
-    rejects(() => services.products.update(second.id, { sku: 'TYRE-01' }), 'CONFLICT');
-    assert.equal(services.products.getById(second.id).sku, 'TYRE-02');
-    assert.equal(services.products.update(product.id, { model: 'Updated', default_selling_price: 0 }).model, 'Updated');
-    assert.equal(services.brands.update(brand.id, { name: 'Michelin updated' }).name, 'Michelin updated');
-    assert.equal(services.categories.update(category.id, { name: 'Passenger updated' }).name, 'Passenger updated');
-    services.brands.deactivate(brand.id);
-    services.categories.deactivate(category.id);
-    assert.equal(services.brands.list({ active: false })[0].id, brand.id);
-    assert.equal(services.categories.list({ active: false })[0].id, category.id);
-    rejects(() => services.products.create({ ...data, sku: 'INACTIVE' }), 'VALIDATION');
-    assert.equal(services.products.update(product.id, { notes: 'Preserved inactive links' }).brand_id, brand.id);
-    services.products.deactivate(product.id);
-    services.products.deactivate(product.id);
-    assert.equal(services.products.list().length, 1);
-    assert.equal(services.products.list({ active: false })[0].id, product.id);
-    assert.equal(services.products.list({ active: 'all' }).length, 2);
-    assert.equal(services.products.getById(product.id).stock_quantity, 0);
-    const activeBrand = services.brands.create({ name: 'Rollback brand' });
-    const activeCategory = services.categories.create({ name: 'Rollback category' });
-    database.exec("CREATE TRIGGER test_inventory_failure BEFORE INSERT ON inventory BEGIN SELECT RAISE(ABORT, 'Simulated failure'); END;");
-    assert.throws(() => services.products.create({ ...data, sku: 'ROLLBACK', brand_id: activeBrand.id, category_id: activeCategory.id }), /Simulated failure/);
-    assert.equal(database.prepare("SELECT COUNT(*) AS n FROM products WHERE sku='ROLLBACK'").get().n, 0);
-    database.exec('DROP TRIGGER test_inventory_failure');
-    console.log('PASS: migration preservation, catalog CRUD/deactivation, validation, search/pagination, zero inventory, transaction rollback.');
-
-    const tables = database.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'").all().map(row => row.name);
-    const snapshot = () => Object.fromEntries(tables.map(table => [table, database.prepare(`SELECT * FROM "${table}"`).all()]));
-    for (const [resource, field, linked] of [['brands','brand_id',brand], ['categories','category_id',category]]) {
-      const api = services[resource];
-      for (const id of [0, -1, '1', null, {}, 1.5]) rejects(() => api.delete(id), 'VALIDATION');
-      rejects(() => api.delete(999999), 'NOT_FOUND');
-      const before = snapshot();
-      assert.throws(() => api.delete(linked.id), error => error.code === 'CONFLICT' && error.message.includes('used by 2 products'));
-      assert.deepEqual(snapshot(), before); // Includes the inactive product and lookup.
-      assert.throws(() => database.prepare(`DELETE FROM ${resource} WHERE id=?`).run(linked.id), /FOREIGN KEY constraint failed/);
-      for (const inactive of [false, true]) {
-        const unused = api.create({ name: `Unused ${resource} ${inactive}` });
-        if (inactive) api.deactivate(unused.id);
-        const beforeDelete = snapshot();
-        api.delete(unused.id);
-        assert.equal(database.prepare(`SELECT * FROM ${resource} WHERE id=?`).get(unused.id), undefined);
-        assert.ok(!api.list({ active: 'all' }).some(row => row.id === unused.id));
-        beforeDelete[resource] = beforeDelete[resource].filter(row => row.id !== unused.id);
-        assert.deepEqual(snapshot(), beforeDelete);
+const timeout = setTimeout(() => {
+  console.error("FAIL: Catalog tests timed out.");
+  app.exit(1);
+}, 60000);
+app
+  .whenReady()
+  .then(async () => {
+    const directory = fs.mkdtempSync(
+      path.join(os.tmpdir(), "mahsood-catalog-"),
+    );
+    let database;
+    let window;
+    let unregister;
+    let code = 0;
+    try {
+      // Test the real v1 -> v2 migration against existing catalog rows.
+      const Database = require("better-sqlite3");
+      database = new Database(path.join(directory, "catalog.sqlite3"));
+      database.exec(
+        fs.readFileSync(
+          path.join(
+            __dirname,
+            "../electron/database/migrations/001-initial.sql",
+          ),
+          "utf8",
+        ),
+      );
+      database.exec(
+        "PRAGMA user_version = 1; INSERT INTO brands(name) VALUES ('Legacy'); INSERT INTO categories(name) VALUES ('Legacy');",
+      );
+      database.close();
+      database = openDatabase(path.join(directory, "catalog.sqlite3"));
+      assert.equal(
+        database.pragma("user_version", { simple: true }),
+        schemaVersion,
+      );
+      assert.equal(
+        database.prepare("SELECT active FROM brands WHERE id=1").get().active,
+        1,
+      );
+      assert.equal(
+        database
+          .prepare(
+            "SELECT updated_at = created_at AS same FROM categories WHERE id=1",
+          )
+          .get().same,
+        1,
+      );
+      migrate(database);
+      const services = createCatalogServices(database);
+      const brand = services.brands.create({ name: " Michelin " });
+      const category = services.categories.create({ name: "Passenger" });
+      const data = {
+        sku: "TYRE-01",
+        brand_id: brand.id,
+        category_id: category.id,
+        model: "Primacy",
+        size: "195/65 R15",
+        default_selling_price: 1250050,
+        minimum_stock: 2,
+      };
+      const product = services.products.create(data);
+      assert.equal(product.stock_quantity, 0);
+      assert.equal(
+        database
+          .prepare("SELECT COUNT(*) AS n FROM inventory WHERE product_id=?")
+          .get(product.id).n,
+        1,
+      );
+      assert.equal(
+        database.prepare("SELECT COUNT(*) AS n FROM stock_movements").get().n,
+        0,
+      );
+      const rejects = (action, code) =>
+        assert.throws(action, (error) => error.code === code);
+      rejects(
+        () => services.products.create({ ...data, sku: "tyre-01" }),
+        "CONFLICT",
+      );
+      for (const invalid of [
+        { sku: "" },
+        { model: " " },
+        { size: "" },
+        { brand_id: null },
+        { category_id: "2" },
+        { default_selling_price: -1 },
+        { default_selling_price: 1.5 },
+        { minimum_stock: -1 },
+        { minimum_stock: Number.MAX_SAFE_INTEGER + 1 },
+        { stock_quantity: 10 },
+        { active: 0 },
+      ])
+        rejects(
+          () => services.products.create({ ...data, ...invalid }),
+          "VALIDATION",
+        );
+      for (const field of ["brand_id", "category_id"])
+        rejects(
+          () => services.products.create({ ...data, [field]: 999 }),
+          "NOT_FOUND",
+        );
+      rejects(() => services.products.getById(999), "NOT_FOUND");
+      rejects(() => services.products.update(product.id, {}), "VALIDATION");
+      rejects(() => services.products.list({ limit: 501 }), "VALIDATION");
+      rejects(() => services.products.list({ active: 1 }), "VALIDATION");
+      for (const resource of ["brands", "categories"]) {
+        rejects(() => services[resource].create({ name: " " }), "VALIDATION");
+        rejects(
+          () => services[resource].update(999, { name: "Missing" }),
+          "NOT_FOUND",
+        );
+        rejects(() => services[resource].deactivate(-1), "VALIDATION");
+        rejects(
+          () => services[resource].create({ name: "legacy" }),
+          "CONFLICT",
+        );
       }
-      const stale = api.create({ name: `Stale ${resource}` });
-      const other = openDatabase(path.join(directory, 'catalog.sqlite3'));
-      try {
-        createCatalogServices(other).products.create({ ...data, sku: `STALE-${resource}`,
-          brand_id: activeBrand.id, category_id: activeCategory.id, [field]: stale.id });
-      } finally { other.close(); }
-      const staleBefore = snapshot();
-      assert.throws(() => api.delete(stale.id), error => error.code === 'CONFLICT' && error.message.includes('used by 1 product.'));
-      assert.deepEqual(snapshot(), staleBefore);
-      const rollback = api.create({ name: `Delete rollback ${resource}` });
-      database.exec(`CREATE TRIGGER delete_failure AFTER DELETE ON ${resource} BEGIN SELECT RAISE(ABORT,'Delete failure'); END`);
-      const rollbackBefore = snapshot();
-      assert.throws(() => api.delete(rollback.id), /Delete failure/);
-      assert.deepEqual(snapshot(), rollbackBefore);
-      database.exec('DROP TRIGGER delete_failure');
-      api.delete(rollback.id);
-    }
-    assert.equal(typeof services.products.delete, 'undefined');
-    assert.equal(database.pragma('user_version', { simple: true }), 5);
-    console.log('PASS: brand/category permanent deletion, active/inactive unused rows, counts including inactive products, unchanged database on rejection, stale references from another connection, FK protection and delete rollback.');
+      for (const search of ["tyre-01", "MICHELIN", "primacy", "195/65"])
+        assert.equal(services.products.list({ search }).length, 1);
+      for (const [field, term] of [
+        ["sku", "TYRE"],
+        ["brand", "Michelin"],
+        ["model", "Prim"],
+        ["size", "R15"],
+      ])
+        assert.equal(services.products.list({ [field]: term }).length, 1);
+      assert.equal(services.products.list({ search: "' OR 1=1 --" }).length, 0);
+      assert.equal(services.products.list({ search: "%" }).length, 0);
+      const second = services.products.create({ ...data, sku: "TYRE-02" });
+      assert.equal(
+        services.products.list({ limit: 1, offset: 1 })[0].id,
+        second.id,
+      );
+      rejects(
+        () => services.products.update(second.id, { sku: "TYRE-01" }),
+        "CONFLICT",
+      );
+      assert.equal(services.products.getById(second.id).sku, "TYRE-02");
+      assert.equal(
+        services.products.update(product.id, {
+          model: "Updated",
+          default_selling_price: 0,
+        }).model,
+        "Updated",
+      );
+      assert.equal(
+        services.brands.update(brand.id, { name: "Michelin updated" }).name,
+        "Michelin updated",
+      );
+      assert.equal(
+        services.categories.update(category.id, { name: "Passenger updated" })
+          .name,
+        "Passenger updated",
+      );
+      services.brands.deactivate(brand.id);
+      services.categories.deactivate(category.id);
+      assert.equal(services.brands.list({ active: false })[0].id, brand.id);
+      assert.equal(
+        services.categories.list({ active: false })[0].id,
+        category.id,
+      );
+      rejects(
+        () => services.products.create({ ...data, sku: "INACTIVE" }),
+        "VALIDATION",
+      );
+      assert.equal(
+        services.products.update(product.id, {
+          notes: "Preserved inactive links",
+        }).brand_id,
+        brand.id,
+      );
+      services.products.deactivate(product.id);
+      services.products.deactivate(product.id);
+      assert.equal(services.products.list().length, 1);
+      assert.equal(services.products.list({ active: false })[0].id, product.id);
+      assert.equal(services.products.list({ active: "all" }).length, 2);
+      assert.equal(services.products.getById(product.id).stock_quantity, 0);
+      const activeBrand = services.brands.create({ name: "Rollback brand" });
+      const activeCategory = services.categories.create({
+        name: "Rollback category",
+      });
+      database.exec(
+        "CREATE TRIGGER test_inventory_failure BEFORE INSERT ON inventory BEGIN SELECT RAISE(ABORT, 'Simulated failure'); END;",
+      );
+      assert.throws(
+        () =>
+          services.products.create({
+            ...data,
+            sku: "ROLLBACK",
+            brand_id: activeBrand.id,
+            category_id: activeCategory.id,
+          }),
+        /Simulated failure/,
+      );
+      assert.equal(
+        database
+          .prepare("SELECT COUNT(*) AS n FROM products WHERE sku='ROLLBACK'")
+          .get().n,
+        0,
+      );
+      database.exec("DROP TRIGGER test_inventory_failure");
+      console.log(
+        "PASS: migration preservation, catalog CRUD/deactivation, validation, search/pagination, zero inventory, transaction rollback.",
+      );
 
-    const html = path.join(directory, 'ipc.html');
-    fs.writeFileSync(html, '<!doctype html><title>Catalog IPC test</title>');
-    window = new BrowserWindow({ show: false, webPreferences: {
-      preload: path.join(__dirname, '../electron/preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true,
-    } });
-    const allowed = new Set([window.webContents]);
-    const guard = createSenderGuard(allowed, pathToFileURL(html).href);
-    unregister = registerCatalogIpc(ipcMain, services, guard);
-    await window.loadFile(html);
-    assert.equal(guard({ sender: window.webContents, senderFrame: window.webContents.mainFrame }), true);
-    assert.equal(guard({ sender: window.webContents, senderFrame: { url: pathToFileURL(html).href } }), false);
-    assert.equal(createSenderGuard(new Set(), pathToFileURL(html).href)({ sender: window.webContents, senderFrame: window.webContents.mainFrame }), false);
-    const result = await window.webContents.executeJavaScript(`(async () => {
+      const tables = database
+        .prepare(
+          "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'",
+        )
+        .all()
+        .map((row) => row.name);
+      const snapshot = () =>
+        Object.fromEntries(
+          tables.map((table) => [
+            table,
+            database.prepare(`SELECT * FROM "${table}"`).all(),
+          ]),
+        );
+      for (const [resource, field, linked] of [
+        ["brands", "brand_id", brand],
+        ["categories", "category_id", category],
+      ]) {
+        const api = services[resource];
+        for (const id of [0, -1, "1", null, {}, 1.5])
+          rejects(() => api.delete(id), "VALIDATION");
+        rejects(() => api.delete(999999), "NOT_FOUND");
+        const before = snapshot();
+        assert.throws(
+          () => api.delete(linked.id),
+          (error) =>
+            error.code === "CONFLICT" &&
+            error.message.includes("used by 2 products"),
+        );
+        assert.deepEqual(snapshot(), before); // Includes the inactive product and lookup.
+        assert.throws(
+          () =>
+            database
+              .prepare(`DELETE FROM ${resource} WHERE id=?`)
+              .run(linked.id),
+          /FOREIGN KEY constraint failed/,
+        );
+        for (const inactive of [false, true]) {
+          const unused = api.create({ name: `Unused ${resource} ${inactive}` });
+          if (inactive) api.deactivate(unused.id);
+          const beforeDelete = snapshot();
+          api.delete(unused.id);
+          assert.equal(
+            database
+              .prepare(`SELECT * FROM ${resource} WHERE id=?`)
+              .get(unused.id),
+            undefined,
+          );
+          assert.ok(
+            !api.list({ active: "all" }).some((row) => row.id === unused.id),
+          );
+          beforeDelete[resource] = beforeDelete[resource].filter(
+            (row) => row.id !== unused.id,
+          );
+          assert.deepEqual(snapshot(), beforeDelete);
+        }
+        const stale = api.create({ name: `Stale ${resource}` });
+        const other = openDatabase(path.join(directory, "catalog.sqlite3"));
+        try {
+          createCatalogServices(other).products.create({
+            ...data,
+            sku: `STALE-${resource}`,
+            brand_id: activeBrand.id,
+            category_id: activeCategory.id,
+            [field]: stale.id,
+          });
+        } finally {
+          other.close();
+        }
+        const staleBefore = snapshot();
+        assert.throws(
+          () => api.delete(stale.id),
+          (error) =>
+            error.code === "CONFLICT" &&
+            error.message.includes("used by 1 product."),
+        );
+        assert.deepEqual(snapshot(), staleBefore);
+        const rollback = api.create({ name: `Delete rollback ${resource}` });
+        database.exec(
+          `CREATE TRIGGER delete_failure AFTER DELETE ON ${resource} BEGIN SELECT RAISE(ABORT,'Delete failure'); END`,
+        );
+        const rollbackBefore = snapshot();
+        assert.throws(() => api.delete(rollback.id), /Delete failure/);
+        assert.deepEqual(snapshot(), rollbackBefore);
+        database.exec("DROP TRIGGER delete_failure");
+        api.delete(rollback.id);
+      }
+      assert.equal(typeof services.products.delete, "undefined");
+      assert.equal(database.pragma("user_version", { simple: true }), 5);
+      console.log(
+        "PASS: brand/category permanent deletion, active/inactive unused rows, counts including inactive products, unchanged database on rejection, stale references from another connection, FK protection and delete rollback.",
+      );
+
+      const html = path.join(directory, "ipc.html");
+      fs.writeFileSync(html, "<!doctype html><title>Catalog IPC test</title>");
+      window = new BrowserWindow({
+        show: false,
+        webPreferences: {
+          preload: path.join(__dirname, "../electron/preload.cjs"),
+          contextIsolation: true,
+          nodeIntegration: false,
+          sandbox: true,
+        },
+      });
+      const allowed = new Set([window.webContents]);
+      const guard = createSenderGuard(allowed, pathToFileURL(html).href);
+      unregister = registerCatalogIpc(ipcMain, services, guard);
+      await window.loadFile(html);
+      assert.equal(
+        guard({
+          sender: window.webContents,
+          senderFrame: window.webContents.mainFrame,
+        }),
+        true,
+      );
+      assert.equal(
+        guard({
+          sender: window.webContents,
+          senderFrame: { url: pathToFileURL(html).href },
+        }),
+        false,
+      );
+      assert.equal(
+        createSenderGuard(
+          new Set(),
+          pathToFileURL(html).href,
+        )({
+          sender: window.webContents,
+          senderFrame: window.webContents.mainFrame,
+        }),
+        false,
+      );
+      const result = await window.webContents.executeJavaScript(`(async () => {
       const b = await window.api.brands.create({name:'IPC brand'});
       const c = await window.api.categories.create({name:'IPC category'});
       const p = await window.api.products.create({sku:'IPC-01', brand_id:b.data.id, category_id:c.data.id, model:'IPC model', size:'R16'});
@@ -159,50 +369,85 @@ app.whenReady().then(async () => {
         node:typeof window.require, invoke:typeof window.api.invoke,
         methods:Object.fromEntries(Object.entries(window.api).map(([key,value])=>[key,Object.keys(value)]))};
     })()`);
-    assert.ok(result.results.every((entry) => entry.ok), JSON.stringify(result));
-    assert.equal(result.results[2].data.stock_quantity, 0);
-    assert.equal(result.invalid.error.code, 'VALIDATION');
-    assert.equal(result.unknown.error.code, 'VALIDATION');
-    assert.equal(result.node, 'undefined');
-    assert.equal(result.invoke, 'undefined');
-    assert.equal(['brands', 'categories', 'products'].flatMap((resource) => result.methods[resource]).length, 18);
-    for (const resource of ['brands', 'categories']) {
-      const deleted = await window.webContents.executeJavaScript(`(async () => {
+      assert.ok(
+        result.results.every((entry) => entry.ok),
+        JSON.stringify(result),
+      );
+      assert.equal(result.results[2].data.stock_quantity, 0);
+      assert.equal(result.invalid.error.code, "VALIDATION");
+      assert.equal(result.unknown.error.code, "VALIDATION");
+      assert.equal(result.node, "undefined");
+      assert.equal(result.invoke, "undefined");
+      assert.equal(
+        ["brands", "categories", "products"].flatMap(
+          (resource) => result.methods[resource],
+        ).length,
+        18,
+      );
+      for (const resource of ["brands", "categories"]) {
+        const deleted = await window.webContents
+          .executeJavaScript(`(async () => {
         const row = await window.api.${resource}.create({name:'IPC unused'});
         return { row, result:await window.api.${resource}.delete(row.data.id), missing:await window.api.${resource}.delete(row.data.id), invalid:await window.api.${resource}.delete('1') };
       })()`);
-      assert.equal(deleted.result.ok, true);
-      assert.equal(deleted.missing.error.code, 'NOT_FOUND');
-      assert.equal(deleted.invalid.error.code, 'VALIDATION');
-      assert.equal(database.prepare(`SELECT * FROM ${resource} WHERE id=?`).get(deleted.row.data.id), undefined);
-      const handlers = new Map();
-      registerCatalogIpc({ handle: (channel, handler) => handlers.set(channel, handler) }, services, guard);
-      const handler = handlers.get(`catalog:${resource}:delete`);
-      const event = { sender: window.webContents, senderFrame: window.webContents.mainFrame };
-      assert.equal(handler(event).error.code, 'VALIDATION');
-      assert.equal(handler(event, 1, 'extra').error.code, 'VALIDATION');
-      assert.equal(handler({}, 1).error.code, 'FORBIDDEN');
+        assert.equal(deleted.result.ok, true);
+        assert.equal(deleted.missing.error.code, "NOT_FOUND");
+        assert.equal(deleted.invalid.error.code, "VALIDATION");
+        assert.equal(
+          database
+            .prepare(`SELECT * FROM ${resource} WHERE id=?`)
+            .get(deleted.row.data.id),
+          undefined,
+        );
+        const handlers = new Map();
+        registerCatalogIpc(
+          { handle: (channel, handler) => handlers.set(channel, handler) },
+          services,
+          guard,
+        );
+        const handler = handlers.get(`catalog:${resource}:delete`);
+        const event = {
+          sender: window.webContents,
+          senderFrame: window.webContents.mainFrame,
+        };
+        assert.equal(handler(event).error.code, "VALIDATION");
+        assert.equal(handler(event, 1, "extra").error.code, "VALIDATION");
+        assert.equal(handler({}, 1).error.code, "FORBIDDEN");
+      }
+      assert.equal(result.methods.products.includes("delete"), false);
+      assert.equal(result.methods.expenseCategories.includes("delete"), false);
+      allowed.clear();
+      const forbidden = await window.webContents.executeJavaScript(
+        "window.api.products.list()",
+      );
+      assert.equal(forbidden.error.code, "FORBIDDEN");
+      allowed.add(window.webContents);
+      await window.loadURL("data:text/html,<title>Untrusted</title>");
+      assert.equal(
+        guard({
+          sender: window.webContents,
+          senderFrame: window.webContents.mainFrame,
+        }),
+        false,
+      );
+      assert.deepEqual(database.pragma("foreign_key_check"), []);
+      console.log(
+        "PASS: catalog preload APIs over real IPC, validation errors, untrusted sender/frame rejection, no renderer Node or generic invoke API.",
+      );
+    } catch (error) {
+      code = 1;
+      console.error("FAIL:", error);
+    } finally {
+      unregister?.();
+      window?.destroy();
+      if (database?.open) database.close();
+      // The deletion target is the unique temporary directory created by this test.
+      fs.rmSync(directory, { recursive: true, force: true });
+      clearTimeout(timeout);
+      app.exit(code);
     }
-    assert.equal(result.methods.products.includes('delete'), false);
-    assert.equal(result.methods.expenseCategories.includes('delete'), false);
-    allowed.clear();
-    const forbidden = await window.webContents.executeJavaScript('window.api.products.list()');
-    assert.equal(forbidden.error.code, 'FORBIDDEN');
-    allowed.add(window.webContents);
-    await window.loadURL('data:text/html,<title>Untrusted</title>');
-    assert.equal(guard({ sender: window.webContents, senderFrame: window.webContents.mainFrame }), false);
-    assert.deepEqual(database.pragma('foreign_key_check'), []);
-    console.log('PASS: catalog preload APIs over real IPC, validation errors, untrusted sender/frame rejection, no renderer Node or generic invoke API.');
-  } catch (error) {
-    code = 1;
-    console.error('FAIL:', error);
-  } finally {
-    unregister?.();
-    window?.destroy();
-    if (database?.open) database.close();
-    // The deletion target is the unique temporary directory created by this test.
-    fs.rmSync(directory, { recursive: true, force: true });
-    clearTimeout(timeout);
-    app.exit(code);
-  }
-}).catch((error) => { console.error(error); app.exit(1); });
+  })
+  .catch((error) => {
+    console.error(error);
+    app.exit(1);
+  });

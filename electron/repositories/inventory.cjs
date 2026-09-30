@@ -29,11 +29,15 @@ function createInventoryRepository(db) {
     AND (@from_date IS NULL OR substr(created_at,1,10)>=@from_date)
     AND (@to_date IS NULL OR substr(created_at,1,10)<=@to_date)
     ORDER BY id DESC LIMIT @limit OFFSET @offset`);
-  const insert = db.prepare(`INSERT INTO stock_movements(product_id,movement_type,quantity_change,unit_cost,notes)
+  const insert =
+    db.prepare(`INSERT INTO stock_movements(product_id,movement_type,quantity_change,unit_cost,notes)
     VALUES (@product_id,@movement_type,@quantity_change,@unit_cost,@notes)`);
-  const cost = db.prepare(`SELECT unit_cost FROM purchase_items WHERE product_id=? ORDER BY id DESC LIMIT 1`);
+  const cost = db.prepare(
+    `SELECT unit_cost FROM purchase_items WHERE product_id=? ORDER BY id DESC LIMIT 1`,
+  );
   return {
-    list: (filters) => list.all(filters), get: (id) => get.get(id),
+    list: (filters) => list.all(filters),
+    get: (id) => get.get(id),
     listMovements: (filters) => movements.all(filters),
     latestPurchaseCost: (id) => cost.get(id)?.unit_cost ?? 0,
     insert: (data) => insert.run(data).lastInsertRowid,

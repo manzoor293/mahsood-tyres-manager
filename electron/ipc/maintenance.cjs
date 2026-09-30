@@ -7,9 +7,21 @@ function createMaintenanceGate(ipcMain) {
       handle(channel, handler) {
         ipcMain.removeHandler(channel);
         ipcMain.handle(channel, async (...args) => {
-          if (locked) return { ok: false, error: { code: 'MAINTENANCE', message: 'Database maintenance is in progress. Please try again when it finishes.' } };
+          if (locked)
+            return {
+              ok: false,
+              error: {
+                code: "MAINTENANCE",
+                message:
+                  "Database maintenance is in progress. Please try again when it finishes.",
+              },
+            };
           active++;
-          try { return await handler(...args); } finally { active--; }
+          try {
+            return await handler(...args);
+          } finally {
+            active--;
+          }
         });
       },
     },
@@ -18,7 +30,9 @@ function createMaintenanceGate(ipcMain) {
       locked = true;
       return true;
     },
-    unlock() { locked = false; },
+    unlock() {
+      locked = false;
+    },
   };
 }
 module.exports = { createMaintenanceGate };

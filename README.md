@@ -147,12 +147,12 @@ History shows every existing movement type, signed quantity changes, notes, invo
 
 `window.api.inventory` uses the existing `{ok,data}` / `{ok:false,error}` envelope:
 
-| Method | Input |
-| --- | --- |
-| `list(filters?)` | `search`, `brand_id`, `category_id`, `active` (`true`, `false`, `'all'`), `stock_status` (`all`, `in`, `low`, `out`), `limit` (1–500), `offset` |
-| `getProductStock(productId)` | Positive integer product ID; includes inactive products |
-| `listMovements(filters?)` | Shared search/brand/category/activity/paging filters, optional `product_id`, `movement_type`, `from_date`, `to_date` (YYYY-MM-DD); activity defaults to all |
-| `adjust(data)` | `product_id`, `movement_type` (`ADJUSTMENT_IN` / `ADJUSTMENT_OUT`), positive integer `quantity`, required `notes`, optional `expected_quantity` |
+| Method                       | Input                                                                                                                                                       |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `list(filters?)`             | `search`, `brand_id`, `category_id`, `active` (`true`, `false`, `'all'`), `stock_status` (`all`, `in`, `low`, `out`), `limit` (1–500), `offset`             |
+| `getProductStock(productId)` | Positive integer product ID; includes inactive products                                                                                                     |
+| `listMovements(filters?)`    | Shared search/brand/category/activity/paging filters, optional `product_id`, `movement_type`, `from_date`, `to_date` (YYYY-MM-DD); activity defaults to all |
+| `adjust(data)`               | `product_id`, `movement_type` (`ADJUSTMENT_IN` / `ADJUSTMENT_OUT`), positive integer `quantity`, required `notes`, optional `expected_quantity`             |
 
 Adjust Stock fetches current stock and requires a separate confirmation showing current, change and expected resulting quantities. The UI sends `expected_quantity` to reject stale confirmations and disables repeated saves. This value is only a concurrency check: the main process independently reads stock, validates product activity, quantity, reason, safe integer bounds and sufficient stock inside an immediate SQLite transaction. It inserts exactly one movement; the existing `movements_apply_inventory` trigger is the sole writer of inventory quantity. Any ledger/trigger failure rolls back both movement and stock change. There is no `setStock`, generic SQL, deletion or movement-edit API.
 
@@ -218,13 +218,13 @@ The **Payments** sidebar page provides Customer Payments and Supplier Payments t
 
 `window.api.customerPayments` and `window.api.supplierPayments` each expose exactly these methods through the existing result/error envelope:
 
-| Method | Input / result |
-| --- | --- |
-| `list(filters?)` | Open linked invoices only; `search`, `customer_id` / `supplier_id`, `limit` (1–100, default 25), `offset`; returns rows and full-filter invoice/paid/outstanding totals |
-| `getOutstanding(saleId / purchaseId)` | Current original invoice total, sum of linked payments, balance and derived payment status |
-| `getAccountSummary(customerId / supplierId)` | Total invoiced/purchased, total linked payments, current outstanding and open-invoice count across **all** invoices/dates for the account |
-| `create(data)` | `customer_id` + `sale_id`, or `supplier_id` + `purchase_id`; positive integer-paise `amount`, required `payment_method`, required `paid_at` (YYYY-MM-DD), optional `notes` (up to 5,000 characters); returns inserted payment and updated invoice facts |
-| `history(filters?)` | Account ID, optional invoice ID, `search` (invoice/account/notes), exact `payment_method` or `all`, date `period`, custom boundaries, limit/offset; returns initial and later linked payments and full-filter count/amount |
+| Method                                       | Input / result                                                                                                                                                                                                                                          |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `list(filters?)`                             | Open linked invoices only; `search`, `customer_id` / `supplier_id`, `limit` (1–100, default 25), `offset`; returns rows and full-filter invoice/paid/outstanding totals                                                                                 |
+| `getOutstanding(saleId / purchaseId)`        | Current original invoice total, sum of linked payments, balance and derived payment status                                                                                                                                                              |
+| `getAccountSummary(customerId / supplierId)` | Total invoiced/purchased, total linked payments, current outstanding and open-invoice count across **all** invoices/dates for the account                                                                                                               |
+| `create(data)`                               | `customer_id` + `sale_id`, or `supplier_id` + `purchase_id`; positive integer-paise `amount`, required `payment_method`, required `paid_at` (YYYY-MM-DD), optional `notes` (up to 5,000 characters); returns inserted payment and updated invoice facts |
+| `history(filters?)`                          | Account ID, optional invoice ID, `search` (invoice/account/notes), exact `payment_method` or `all`, date `period`, custom boundaries, limit/offset; returns initial and later linked payments and full-filter count/amount                              |
 
 History defaults to all dates and supports Today, Last 7 days, This month, This year and an inclusive custom range. It reuses Dashboard/Reports local-date predicates, so existing UTC initial-payment timestamps and new date-only later payments share consistent local calendar filtering. A date-only payment has no invented time of day. Exact legacy payment methods remain searchable, although new entries accept only Cash, Bank transfer or Cheque. Dates may be historical or future valid calendar dates; no artificial invoice-date ordering rule is introduced. Current balances include all persisted linked payments regardless of payment date, while Dashboard's period cash totals filter payment dates.
 
@@ -246,16 +246,16 @@ Reports provides eight read-only views of persisted data: Sales, Purchases, Inve
 
 The eight explicit `window.api.reports` methods are `getSales`, `getPurchases`, `getInventory`, `getStockMovements`, `getExpenses`, `getProfit`, `getReceivables` and `getPayables`. Each accepts an optional plain filter object and returns the existing `{ok,data}` / `{ok:false,error}` envelope. Data contains `rows`, `summary`, `totalRows`, `limit`, `offset` and `range` (null for current-state reports). Main-process validation rejects unknown fields, invalid enums, dates, IDs and pagination values. All methods execute SQL reads within one deferred snapshot transaction; database handles and SQL are never exposed across preload.
 
-| Report | Filters beyond pagination | Data and totals |
-| --- | --- | --- |
-| Sales | Period, invoice `search`, `customer_id`, `walk_in`, `payment_status`, `payment_method` | Sales/items/customers and linked customer payments; invoice count, discounted revenue, received on invoices, outstanding |
-| Purchases | Period, invoice `search`, `supplier_id`, `payment_status` | Purchases/items/suppliers and linked supplier payments; invoice count, discounted purchase value, paid on invoices, outstanding |
-| Inventory | `search` (SKU/model/size), `brand_id`, `category_id`, `stock_status`, `active` | Shared Inventory projection and catalog lookups; matching products, active products, physical stock units, low/out counts |
-| Stock Movements | Period, `product_id`, `movement_type` | Actual ledger rows, products and linked purchase/sale invoices; entry count, units in and units out |
-| Expenses | Period, `expense_category_id`, `payment_method`, `search` (description/category) | Expenses/categories; count and total amount |
-| Profit | Period | Sale headers and historical sale-item costs, plus period expenses; discounted revenue, cost, gross profit, expenses, operating result and unknown-cost diagnostics |
-| Receivables | `search` (customer name/phone) | Named customers' positive open sale balances; account/open-invoice counts, open invoice totals, paid on those invoices and outstanding |
-| Payables | `search` (supplier name/phone) | Suppliers' positive open purchase balances; account/open-invoice counts, open invoice totals, paid on those invoices and outstanding |
+| Report          | Filters beyond pagination                                                              | Data and totals                                                                                                                                                    |
+| --------------- | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Sales           | Period, invoice `search`, `customer_id`, `walk_in`, `payment_status`, `payment_method` | Sales/items/customers and linked customer payments; invoice count, discounted revenue, received on invoices, outstanding                                           |
+| Purchases       | Period, invoice `search`, `supplier_id`, `payment_status`                              | Purchases/items/suppliers and linked supplier payments; invoice count, discounted purchase value, paid on invoices, outstanding                                    |
+| Inventory       | `search` (SKU/model/size), `brand_id`, `category_id`, `stock_status`, `active`         | Shared Inventory projection and catalog lookups; matching products, active products, physical stock units, low/out counts                                          |
+| Stock Movements | Period, `product_id`, `movement_type`                                                  | Actual ledger rows, products and linked purchase/sale invoices; entry count, units in and units out                                                                |
+| Expenses        | Period, `expense_category_id`, `payment_method`, `search` (description/category)       | Expenses/categories; count and total amount                                                                                                                        |
+| Profit          | Period                                                                                 | Sale headers and historical sale-item costs, plus period expenses; discounted revenue, cost, gross profit, expenses, operating result and unknown-cost diagnostics |
+| Receivables     | `search` (customer name/phone)                                                         | Named customers' positive open sale balances; account/open-invoice counts, open invoice totals, paid on those invoices and outstanding                             |
+| Payables        | `search` (supplier name/phone)                                                         | Suppliers' positive open purchase balances; account/open-invoice counts, open invoice totals, paid on those invoices and outstanding                               |
 
 Pagination defaults to 25 rows, with backend `limit` from 1 to 100 and nonnegative `offset`. SQL computes totals over the **complete filtered dataset before pagination**, even when the requested page has no rows. Each UI page has 25 rows. Ordering is stable: transactions by local date/time then ID; inventory by SKU then product ID; accounts by outstanding descending then name/ID. Detail tables scroll inside the page at narrow window sizes.
 
@@ -281,18 +281,18 @@ The Dashboard reads persisted data through `window.api.dashboard.getOverview(fil
 
 Filters accept `period: 'today' | 'week' | 'month' | 'year' | 'custom'` (default `month`). Week means today plus the previous six days; month/year mean their first day through today. Custom requires `from_date` and `to_date` in YYYY-MM-DD format, both inclusive, with a maximum ten-year span. Calendar dates use the main process's local timezone, displayed above the cards. UTC timestamps are filtered against local-midnight boundaries converted to UTC, with an exclusive next-day endpoint; date-only purchases and expenses retain their literal local business date. Legacy UTC purchase/expense/payment timestamps are supported too. These Dashboard local-date rules do not change existing module filters.
 
-| Metric | Definition and source |
-| --- | --- |
-| Sales Revenue / invoice count | Sum of `sales.total` after invoice discounts / count of sales in the selected period |
-| Amount Received | Sum of `customer_payments.amount` with a linked sale, filtered by payment date rather than invoice date |
-| Purchases / purchase count | Sum of `purchases.total` after discounts / count of purchases in the selected period |
-| Supplier amount paid | Sum of `supplier_payments.amount` with a linked purchase, filtered by payment date |
-| Expenses | Sum of `expenses.amount` in the selected period |
-| Customer Receivables | All recorded sales totals minus all linked customer payments, including unpaid walk-in sales |
-| Supplier Payables | All recorded purchase totals minus all linked supplier payments |
-| Gross Profit | Selected sales revenue minus `SUM(sale_items.quantity * sale_items.unit_cost)`, using the cost captured at sale time |
-| Stock Units / active products | Sum of current `inventory.quantity` / count of active products, excluding inactive inventory |
-| Low / out of stock | Shared Inventory projection: positive quantity at or below `minimum_stock` / zero quantity; the counts are disjoint |
+| Metric                        | Definition and source                                                                                                |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| Sales Revenue / invoice count | Sum of `sales.total` after invoice discounts / count of sales in the selected period                                 |
+| Amount Received               | Sum of `customer_payments.amount` with a linked sale, filtered by payment date rather than invoice date              |
+| Purchases / purchase count    | Sum of `purchases.total` after discounts / count of purchases in the selected period                                 |
+| Supplier amount paid          | Sum of `supplier_payments.amount` with a linked purchase, filtered by payment date                                   |
+| Expenses                      | Sum of `expenses.amount` in the selected period                                                                      |
+| Customer Receivables          | All recorded sales totals minus all linked customer payments, including unpaid walk-in sales                         |
+| Supplier Payables             | All recorded purchase totals minus all linked supplier payments                                                      |
+| Gross Profit                  | Selected sales revenue minus `SUM(sale_items.quantity * sale_items.unit_cost)`, using the cost captured at sale time |
+| Stock Units / active products | Sum of current `inventory.quantity` / count of active products, excluding inactive inventory                         |
+| Low / out of stock            | Shared Inventory projection: positive quantity at or below `minimum_stock` / zero quantity; the counts are disjoint  |
 
 Balances are current across all stored dates, not balances as of the selected period. Unlinked payments do not offset invoice balances. Zero historical cost cannot be distinguished from the Sales module's unknown-cost fallback, so every zero-cost sale item is conservatively counted in `unknownCostItemCount` (item rows, not units). If any exist, `grossProfit` is `null` and the UI displays **Incomplete**, an explanatory warning and the count instead of an inflated amount. Current product prices and subsequent purchase costs never recalculate historical profit. This is gross profit based on recorded historical costs, not formal net profit; purchase-discount allocation and formal accounting valuation are not introduced.
 
@@ -344,11 +344,11 @@ Run `npm run test:settings` and, after `npm run build`, `npm run test:settings:u
 
 All methods return promises resolving to `{ ok: true, data }` or `{ ok: false, error: { code, message } }`. Expected error codes are `VALIDATION`, `NOT_FOUND`, `CONFLICT`, and `FORBIDDEN`; unexpected failures return `INTERNAL` without SQL details. Transport failures may reject the promise.
 
-| API | Methods |
-| --- | --- |
-| `window.api.brands` | `list(filters?)`, `create({name})`, `update(id, {name})`, `deactivate(id)` |
-| `window.api.categories` | `list(filters?)`, `create({name})`, `update(id, {name})`, `deactivate(id)` |
-| `window.api.products` | `list(filters?)`, `getById(id)`, `create(data)`, `update(id, patch)`, `deactivate(id)` |
+| API                     | Methods                                                                                |
+| ----------------------- | -------------------------------------------------------------------------------------- |
+| `window.api.brands`     | `list(filters?)`, `create({name})`, `update(id, {name})`, `deactivate(id)`             |
+| `window.api.categories` | `list(filters?)`, `create({name})`, `update(id, {name})`, `deactivate(id)`             |
+| `window.api.products`   | `list(filters?)`, `getById(id)`, `create(data)`, `update(id, patch)`, `deactivate(id)` |
 
 Lists return arrays, defaulting to active records, `limit: 100`, `offset: 0`. Filters accept `active: true | false | 'all'`, a limit from 1 to 500, and a nonnegative offset. Product filters additionally accept `search` (SKU, brand name, model, or size), individual `sku`, `brand`, `model`, `size` text filters, and exact `brand_id`/`category_id`. Text searches use literal substrings with SQLite's ASCII case folding; `%` and `_` are literal characters. Combined filters use AND; `search` matches any of its four fields. Lists are ordered by name/SKU then ID for stable pagination.
 

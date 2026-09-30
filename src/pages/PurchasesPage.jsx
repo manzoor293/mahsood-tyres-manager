@@ -1,4 +1,4 @@
-import StatusBadge from '../components/StatusBadge.jsx';
+import StatusBadge from "../components/StatusBadge.jsx";
 import { useEffect, useState } from "react";
 import {
   Alert,
@@ -17,7 +17,13 @@ import PurchaseDialog from "../components/purchases/PurchaseDialog.jsx";
 import PurchaseDetails from "../components/purchases/PurchaseDetails.jsx";
 import { catalogRequest, formatPrice } from "../utils/catalog.js";
 
-const defaults = { search: "", supplier: "all", from: "", to: "", status: "all" };
+const defaults = {
+  search: "",
+  supplier: "all",
+  from: "",
+  to: "",
+  status: "all",
+};
 export default function PurchasesPage() {
   const [filters, setFilters] = useState(defaults);
   const [page, setPage] = useState(0);
@@ -45,7 +51,8 @@ export default function PurchasesPage() {
           limit: 51,
           offset: page * 50,
         };
-        if (filters.supplier !== "all") query.supplier_id = Number(filters.supplier);
+        if (filters.supplier !== "all")
+          query.supplier_id = Number(filters.supplier);
         if (filters.from) query.from_date = filters.from;
         if (filters.to) query.to_date = filters.to;
         const supplierRows = [];
@@ -231,10 +238,7 @@ export default function PurchasesPage() {
                       ),
                     )}
                     <TableCell>
-                      <StatusBadge
-                        size="small"
-                        status={row.payment_status}
-                      />
+                      <StatusBadge size="small" status={row.payment_status} />
                     </TableCell>
                     <TableCell>
                       <Button

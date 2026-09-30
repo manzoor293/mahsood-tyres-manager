@@ -1,5 +1,5 @@
-const {seedReturns}=require('./returns-fixtures.cjs');
-const {createReturnServices}=require('../electron/services/returns.cjs');
+const { seedReturns } = require("./returns-fixtures.cjs");
+const { createReturnServices } = require("../electron/services/returns.cjs");
 function seedPrinting(db) {
   seedReturns(db);
   db.exec(`
@@ -14,8 +14,18 @@ function seedPrinting(db) {
     INSERT INTO customer_payments(id,customer_id,sale_id,amount,payment_method,paid_at,notes) VALUES(3,1,3,5000,'Cash','2026-09-26','Initial partial'),(4,1,3,7501,'Bank transfer','2026-09-01','Backdated later payment');
     INSERT INTO customer_payments(id,customer_id,amount,payment_method,paid_at,notes) VALUES(5,1,2000,'Cash','2026-09-01','Unlinked legacy receipt');
   `);
-  const services=createReturnServices(db);
-  services.saleReturns.create({sale_id:1,returned_at:'2026-09-26',notes:'Saved sale return',items:[{sale_item_id:1,quantity:1}]});
-  services.purchaseReturns.create({purchase_id:1,returned_at:'2026-09-26',notes:'Saved purchase return',items:[{purchase_item_id:2,quantity:1}]});
+  const services = createReturnServices(db);
+  services.saleReturns.create({
+    sale_id: 1,
+    returned_at: "2026-09-26",
+    notes: "Saved sale return",
+    items: [{ sale_item_id: 1, quantity: 1 }],
+  });
+  services.purchaseReturns.create({
+    purchase_id: 1,
+    returned_at: "2026-09-26",
+    notes: "Saved purchase return",
+    items: [{ purchase_item_id: 2, quantity: 1 }],
+  });
 }
-module.exports={seedPrinting};
+module.exports = { seedPrinting };

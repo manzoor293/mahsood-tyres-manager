@@ -1,4 +1,4 @@
-function seedReturns(db){
+function seedReturns(db) {
   db.exec(`
     INSERT INTO suppliers(id,name) VALUES(1,'Return Supplier');
     INSERT INTO customers(id,name) VALUES(1,'Return Customer');
@@ -13,4 +13,4 @@ function seedReturns(db){
     INSERT INTO supplier_payments(supplier_id,purchase_id,amount,payment_method,paid_at) VALUES(1,1,119999,'Cash','2026-09-01');
   `);
 }
-module.exports={seedReturns};
+module.exports = { seedReturns };
