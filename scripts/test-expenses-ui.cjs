@@ -25,7 +25,7 @@ app.on('browser-window-created',(_,window)=>{
     const row=`document.querySelector('[data-expense-id="1"]')?.textContent`;
     const url=process.argv.includes('--dev')?'http://127.0.0.1:5173/':pathToFileURL(path.join(__dirname,'../dist/index.html')).href;
     const guard=createSenderGuard(new Set([window.webContents]),url);
-    const restore=()=>{for(const [resource,methods]of Object.entries({expenses:['list','getById','create','update'],expenseCategories:['list','create','update','deactivate']}))for(const method of methods)ipcMain.removeHandler(`${resource}:${method}`);registerExpenseIpc(ipcMain,service,guard);};
+    const restore=()=>{for(const [resource,methods]of Object.entries({expenses:['list','getById','create','update'],expenseCategories:['list','create','update','deactivate','activate']}))for(const method of methods)ipcMain.removeHandler(`${resource}:${method}`);registerExpenseIpc(ipcMain,service,guard);};
     try{
       await evaluate('location.hash="/expenses"');await wait(`document.body.textContent.includes('No expenses found.')`);
       await click('Add Expense');await click('Create Expense');await wait(`document.body.textContent.includes('Select an expense category.')`);await click('Cancel');await wait(noDialog);

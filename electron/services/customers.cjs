@@ -14,6 +14,7 @@ function createCustomerService(database) {
     getById: required,
     create: (data) => database.transaction(() => repository.create(customerData(data))).immediate(),
     update: (value, data) => database.transaction(() => repository.update(value, customerData(data, required(value)))).immediate(),
+    activate: (value) => database.transaction(() => { required(value); return repository.activate(value); }).immediate(),
     deactivate: (value) => database.transaction(() => { required(value); return repository.deactivate(value); }).immediate(),
   };
 }

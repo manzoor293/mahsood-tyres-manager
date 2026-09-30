@@ -124,7 +124,7 @@ app.on('browser-window-created', (_event, window) => {
       await wait(`document.querySelector('section')?.textContent.includes('Loading products…')`);
       await wait(`document.querySelector('[role="alert"]')?.textContent.includes('Temporary test failure')`);
       // Restore production handlers, with the actual sender guard, before retrying.
-      for (const [resource, methods] of Object.entries({ brands: ['list','create','update','deactivate'], categories: ['list','create','update','deactivate'], products: ['list','getById','create','update','deactivate'] })) {
+      for (const [resource, methods] of Object.entries({ brands: ['list','create','update','deactivate','activate','delete'], categories: ['list','create','update','deactivate','activate','delete'], products: ['list','getById','create','update','deactivate','activate'] })) {
         for (const method of methods) ipcMain.removeHandler(`catalog:${resource}:${method}`);
       }
       const url = process.argv.includes('--dev') ? 'http://127.0.0.1:5173/' : pathToFileURL(path.join(__dirname, '../dist/index.html')).href;

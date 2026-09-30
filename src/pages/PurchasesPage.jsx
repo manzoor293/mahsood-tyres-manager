@@ -1,8 +1,8 @@
+import StatusBadge from '../components/StatusBadge.jsx';
 import { useEffect, useState } from "react";
 import {
   Alert,
   Button,
-  Chip,
   CircularProgress,
   Paper,
   Table,
@@ -231,12 +231,9 @@ export default function PurchasesPage() {
                       ),
                     )}
                     <TableCell>
-                      <Chip
+                      <StatusBadge
                         size="small"
-                        label={row.payment_status}
-                        color={
-                          row.payment_status === "paid" ? "success" : "default"
-                        }
+                        status={row.payment_status}
                       />
                     </TableCell>
                     <TableCell>

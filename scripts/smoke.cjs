@@ -106,6 +106,25 @@ app.on('browser-window-created', (_event, window) => {
       assert.equal(styles.sidebar, 'flex');
       assert.equal(styles.surface, 'rgb(255, 255, 255)');
       assert.equal(styles.overflow, false);
+      const verifyBranding = async () => {
+        const brand = await window.webContents.executeJavaScript(`(async () => {
+          const logo = document.querySelector('aside img[alt="Mahsood Tyres logo"]');
+          await logo?.decode();
+          const sidebar = document.querySelector('aside');
+          const header = document.querySelector('header');
+          return {
+            loaded: Boolean(logo?.naturalWidth),
+            fit: logo && getComputedStyle(logo).objectFit,
+            business: sidebar.textContent.includes('Mahsood Tyres'),
+            software: header.textContent.includes('Mahsood Tyre Manager'),
+            fits: sidebar.scrollWidth === sidebar.clientWidth && header.scrollWidth === header.clientWidth,
+          };
+        })()`);
+        assert.equal(brand.loaded, true);
+        assert.equal(brand.fit, 'contain');
+        assert.equal(brand.business && brand.software && brand.fits, true);
+      };
+      await verifyBranding();
       // Let navigation styling finish painting before capturing the window.
       await new Promise((resolve) => setTimeout(resolve, 300));
       const screenshot = await window.webContents.capturePage();
@@ -116,6 +135,8 @@ app.on('browser-window-created', (_event, window) => {
       window.setSize(640, 480);
       await new Promise((resolve) => setTimeout(resolve, 250));
       assert.equal(await window.webContents.executeJavaScript('document.documentElement.scrollWidth > innerWidth'), false);
+      await verifyBranding();
+      await fs.writeFile(path.join(__dirname, `../artifacts/${mode}-narrow.png`), (await window.webContents.capturePage()).toPNG());
       console.log(`PASS (${mode}): all twelve routes, active navigation, hash reload, fallback, Tailwind/MUI styles, narrow window, preload bridge, isolation and sandbox.`);
       clearTimeout(timeout);
       app.quit();

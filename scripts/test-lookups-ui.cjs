@@ -117,6 +117,58 @@ app.on('browser-window-created', (_event, window) => {
       await click('Cancel');
       await wait(noDialogs);
 
+      for (const [resource, singular, plural, field] of [['brands','Brand','Brands','brand_id'], ['categories','Category','Categories','category_id']]) {
+        await click(`Manage ${plural}`);
+        await wait(`Boolean(document.querySelector('[data-lookup-id]'))`);
+        await click(`Activate ${singular.toLowerCase()} Archived ${singular}`);
+        await wait(`document.querySelector('[data-lookup-id]')?.textContent.includes('Active')`);
+        await input('lookup-status', 'inactive');
+        await wait(`${managerText}?.includes('No ${resource} found')`);
+        await input('lookup-status', 'active');
+        await wait(`Boolean(document.querySelector('[data-lookup-id]'))`);
+        const linkedBefore = database.prepare(`SELECT * FROM ${resource} WHERE id=?`).get(records[resource].id);
+        const productBefore = database.prepare('SELECT * FROM products WHERE id=?').get(created.data.id);
+        await click(`Delete ${singular.toLowerCase()} Archived ${singular}`);
+        await wait(`Boolean(document.querySelector('[aria-labelledby="lookup-delete-title"]'))`);
+        assert.ok(await evaluate(`Array.from(document.querySelectorAll('button')).find(b => b.textContent === 'Delete permanently').disabled`));
+        await evaluate(`document.querySelector('[aria-labelledby="lookup-delete-title"] input[type="checkbox"]').click()`);
+        await click('Delete permanently');
+        await wait(`document.querySelector('[aria-labelledby="lookup-delete-title"]')?.textContent.includes('used by 1 product.')`);
+        assert.deepEqual(database.prepare(`SELECT * FROM ${resource} WHERE id=?`).get(records[resource].id), linkedBefore);
+        assert.deepEqual(database.prepare('SELECT * FROM products WHERE id=?').get(created.data.id), productBefore);
+        await evaluate(`Array.from(document.querySelector('[aria-labelledby="lookup-delete-title"]').querySelectorAll('button')).find(b => b.textContent === 'Cancel').click()`);
+        await wait(`!document.querySelector('[aria-labelledby="lookup-delete-title"]')`);
+
+        for (const inactive of [false, true]) {
+          await input('lookup-status', 'all');
+          await input('lookup-name', `Accidental ${singular}`);
+          await click(`Add ${singular}`);
+          await wait(`${managerText}?.includes('${singular} added.') && document.querySelectorAll('[data-lookup-id]').length === 2`);
+          const unused = database.prepare(`SELECT * FROM ${resource} WHERE name=?`).get(`Accidental ${singular}`);
+          if (inactive) {
+            await click(`Deactivate ${singular.toLowerCase()} Accidental ${singular}`);
+            await click(`Deactivate ${singular}`);
+            await wait(`document.querySelector('[data-lookup-id="${unused.id}"]')?.textContent.includes('Inactive')`);
+          }
+          await click(`Delete ${singular.toLowerCase()} Accidental ${singular}`);
+          await wait(`document.querySelector('[aria-labelledby="lookup-delete-title"]')?.textContent.includes('This cannot be undone.')`);
+          await evaluate(`Array.from(document.querySelector('[aria-labelledby="lookup-delete-title"]').querySelectorAll('button')).find(b => b.textContent === 'Cancel').click()`);
+          await wait(`!document.querySelector('[aria-labelledby="lookup-delete-title"]')`);
+          assert.ok(database.prepare(`SELECT * FROM ${resource} WHERE id=?`).get(unused.id));
+          await click(`Delete ${singular.toLowerCase()} Accidental ${singular}`);
+          await wait(`Boolean(document.querySelector('[aria-labelledby="lookup-delete-title"]'))`);
+          assert.ok(await evaluate(`Array.from(document.querySelectorAll('button')).find(b => b.textContent === 'Delete permanently').disabled`));
+          await evaluate(`document.querySelector('[aria-labelledby="lookup-delete-title"] input[type="checkbox"]').click()`);
+          await click('Delete permanently');
+          await wait(`${managerText}?.includes('${singular} permanently deleted.') && !document.querySelector('[data-lookup-id="${unused.id}"]')`);
+          assert.equal(database.prepare(`SELECT * FROM ${resource} WHERE id=?`).get(unused.id), undefined);
+        }
+        await click('Done'); await wait(noDialogs);
+        await checkOption(field, `Accidental ${singular}`, false);
+        await checkOption(field, `Archived ${singular}`);
+      }
+      console.log('PASS: Brand/Category deletion confirmation, acknowledgement reset, cancellation, active/inactive unused deletion, immediate list/options refresh, referenced rejection with preserved rows, and reactivation filters.');
+
       ipcMain.removeHandler('catalog:brands:list');
       ipcMain.handle('catalog:brands:list', async () => {
         await new Promise((resolve) => setTimeout(resolve, 300));
@@ -125,7 +177,7 @@ app.on('browser-window-created', (_event, window) => {
       await click('Manage Brands');
       await wait(`${managerText}?.includes('Loading brands')`);
       await wait(`${managerText}?.includes('Temporary lookup test failure')`);
-      for (const [resource, methods] of Object.entries({ brands: ['list','create','update','deactivate'], categories: ['list','create','update','deactivate'], products: ['list','getById','create','update','deactivate'] })) {
+      for (const [resource, methods] of Object.entries({ brands: ['list','create','update','deactivate','activate','delete'], categories: ['list','create','update','deactivate','activate','delete'], products: ['list','getById','create','update','deactivate','activate'] })) {
         for (const method of methods) ipcMain.removeHandler(`catalog:${resource}:${method}`);
       }
       const url = process.argv.includes('--dev') ? 'http://127.0.0.1:5173/' : pathToFileURL(path.join(__dirname, '../dist/index.html')).href;

@@ -17,9 +17,9 @@ function createSenderGuard(allowedContents, allowedUrl) {
 function registerCatalogIpc(ipcMain, services, isTrustedSender) {
   const channels = [];
   const methods = {
-    brands: { list: [0, 1], create: [1, 1], update: [2, 2], deactivate: [1, 1] },
-    categories: { list: [0, 1], create: [1, 1], update: [2, 2], deactivate: [1, 1] },
-    products: { list: [0, 1], getById: [1, 1], create: [1, 1], update: [2, 2], deactivate: [1, 1] },
+    brands: { list: [0, 1], create: [1, 1], update: [2, 2], activate: [1, 1], deactivate: [1, 1], delete: [1, 1] },
+    categories: { list: [0, 1], create: [1, 1], update: [2, 2], activate: [1, 1], deactivate: [1, 1], delete: [1, 1] },
+    products: { list: [0, 1], getById: [1, 1], create: [1, 1], update: [2, 2], activate: [1, 1], deactivate: [1, 1] },
   };
   for (const [resource, operations] of Object.entries(methods)) {
     for (const [operation, [minimum, maximum]] of Object.entries(operations)) {

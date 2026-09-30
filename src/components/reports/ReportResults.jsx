@@ -1,11 +1,13 @@
+import StatusBadge from '../StatusBadge.jsx';
 import {Button,Paper,Table,TableBody,TableCell,TableContainer,TableHead,TableRow} from '@mui/material';
 import {formatPrice} from '../../utils/catalog.js';
 function display(value,column) {
+  if(column.key==='payment_status')return <StatusBadge status={value} label={value||'—'} />;
   if(column.type==='money')return value===null?'Incomplete':formatPrice(value);
   if(column.type==='number')return value.toLocaleString('en-PK');
   if(column.type==='date')return value.length===10?value:new Date(value).toLocaleString('en-PK');
-  if(column.type==='active')return value?'Active':'Inactive';
-  if(column.key==='stock_status')return {in:'In stock',low:'Low stock',out:'Out of stock'}[value];
+  if(column.type==='active')return <StatusBadge label={value?'Active':'Inactive'} color={value?'success':'default'} variant="outlined" />;
+  if(column.key==='stock_status')return <StatusBadge label={{in:'In stock',low:'Low stock',out:'Out of stock'}[value]} color={value==='in'?'success':value==='low'?'warning':'error'} />;
   if(column.key==='contact_name')return value||'Walk-in';
   return value||'—';
 }

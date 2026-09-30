@@ -1,4 +1,5 @@
-import { Button,Chip,Paper,Table,TableBody,TableCell,TableContainer,TableHead,TableRow } from '@mui/material';
+import StatusBadge from '../StatusBadge.jsx';
+import { Button,Paper,Table,TableBody,TableCell,TableContainer,TableHead,TableRow } from '@mui/material';
 import { Link } from 'react-router-dom';
 import { formatPrice } from '../../utils/catalog.js';
 
@@ -12,7 +13,7 @@ export function TopProducts({rows}) {
 }
 export function StockAlerts({rows,total}) {
   return <Panel title="Stock Alerts" note={`Current active inventory · showing ${rows.length} of ${total} alerts. Out of stock first.`} action={<Button component={Link} to="/inventory" size="small">View Inventory</Button>}>
-    {!rows.length?<p className="py-6 text-sm text-slate-500">No active products need replenishment.</p>:<TableContainer tabIndex={0} aria-label="Stock alerts, scroll for more columns"><Table size="small" aria-label="Stock alerts" sx={{minWidth:480}}><TableHead><TableRow>{['Product / SKU','Size','Stock / Min','Status'].map((label)=><TableCell key={label}>{label}</TableCell>)}</TableRow></TableHead><TableBody>{rows.map((row)=><TableRow key={row.product_id} data-stock-alert={row.product_id}><TableCell sx={{overflowWrap:'anywhere',maxWidth:220}}>{row.model}<div className="text-xs text-slate-500">{row.sku}</div></TableCell><TableCell>{row.size}</TableCell><TableCell>{row.quantity} / {row.minimum_stock}</TableCell><TableCell><Chip size="small" color={row.stock_status==='out'?'error':'warning'} label={row.stock_status==='out'?'Out of stock':'Low stock'}/></TableCell></TableRow>)}</TableBody></Table></TableContainer>}
+    {!rows.length?<p className="py-6 text-sm text-slate-500">No active products need replenishment.</p>:<TableContainer tabIndex={0} aria-label="Stock alerts, scroll for more columns"><Table size="small" aria-label="Stock alerts" sx={{minWidth:480}}><TableHead><TableRow>{['Product / SKU','Size','Stock / Min','Status'].map((label)=><TableCell key={label}>{label}</TableCell>)}</TableRow></TableHead><TableBody>{rows.map((row)=><TableRow key={row.product_id} data-stock-alert={row.product_id}><TableCell sx={{overflowWrap:'anywhere',maxWidth:220}}>{row.model}<div className="text-xs text-slate-500">{row.sku}</div></TableCell><TableCell>{row.size}</TableCell><TableCell>{row.quantity} / {row.minimum_stock}</TableCell><TableCell><StatusBadge size="small" color={row.stock_status==='out'?'error':'warning'} label={row.stock_status==='out'?'Out of stock':'Low stock'}/></TableCell></TableRow>)}</TableBody></Table></TableContainer>}
   </Panel>;
 }
 export function RecentActivity({rows}) {

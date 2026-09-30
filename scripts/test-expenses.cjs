@@ -90,7 +90,7 @@ app.whenReady().then(async()=>{
       return {results:[c,e,await window.api.expenses.getById(e.data.id),await window.api.expenses.list(),await window.api.expenses.update(e.data.id,{amount:15000}),await window.api.expenseCategories.list(),await window.api.expenseCategories.update(c.data.id,{name:'IPC renamed'}),await window.api.expenseCategories.deactivate(c.data.id)],
         invalid:await window.api.expenses.create({amount:0}),keys:Object.keys(window.api.expenses).sort(),categoryKeys:Object.keys(window.api.expenseCategories).sort(),node:typeof window.require,sql:typeof window.api.invoke};})()`);
     assert.ok(result.results.every((r)=>r.ok));assert.equal(result.invalid.error.code,'VALIDATION');
-    assert.deepEqual(result.keys,['create','getById','list','update']);assert.deepEqual(result.categoryKeys,['create','deactivate','list','update']);assert.equal(result.node,'undefined');assert.equal(result.sql,'undefined');
+    assert.deepEqual(result.keys,['create','getById','list','update']);assert.deepEqual(result.categoryKeys,['activate','create','deactivate','list','update']);assert.equal(result.node,'undefined');assert.equal(result.sql,'undefined');
     allowed.clear();assert.equal((await window.webContents.executeJavaScript('window.api.expenses.list()')).error.code,'FORBIDDEN');
     assert.deepEqual(db.pragma('foreign_key_check'),[]);
     console.log('PASS: v2-to-v3 preservation/rollback, expense CRUD/filtering/validation/integer money, inactive categories/legacy retention, no stock/payment effects, persistence and all eight real preload/IPC APIs.');

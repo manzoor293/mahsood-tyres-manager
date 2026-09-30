@@ -39,7 +39,7 @@ app.on('browser-window-created', (_event, window) => {
     const rowText = `document.querySelector('[data-supplier-id]')?.textContent`;
     let unregister;
     const restore = () => {
-      for (const method of ['list', 'getById', 'create', 'update', 'deactivate']) ipcMain.removeHandler(`suppliers:${method}`);
+      for (const method of ['list', 'getById', 'create', 'update', 'deactivate', 'activate']) ipcMain.removeHandler(`suppliers:${method}`);
       const url = process.argv.includes('--dev') ? 'http://127.0.0.1:5173/' : pathToFileURL(path.join(__dirname, '../dist/index.html')).href;
       unregister = registerSupplierIpc(ipcMain, createSupplierService(database), createSenderGuard(new Set([window.webContents]), url));
     };

@@ -95,7 +95,7 @@ app.whenReady().then(async () => {
     assert.equal(result.invalid.error.code, 'VALIDATION');
     assert.equal(result.unknown.error.code, 'VALIDATION');
     assert.equal(result.missing.error.code, 'NOT_FOUND');
-    assert.deepEqual(result.keys.sort(), ['create', 'deactivate', 'getById', 'list', 'update']);
+    assert.deepEqual(result.keys.sort(), ['activate', 'create', 'deactivate', 'getById', 'list', 'update']);
     assert.equal(result.node, 'undefined'); assert.equal(result.invoke, 'undefined');
     allowed.clear();
     assert.equal((await window.webContents.executeJavaScript('window.api.customers.list()')).error.code, 'FORBIDDEN');

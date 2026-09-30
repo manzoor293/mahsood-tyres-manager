@@ -4,13 +4,22 @@ function createLookupRepository(database, table) {
   const get = database.prepare(`SELECT * FROM ${table} WHERE id = ?`);
   const insert = database.prepare(`INSERT INTO ${table}(name, updated_at) VALUES (?, ?)`);
   const update = database.prepare(`UPDATE ${table} SET name = ?, updated_at = ? WHERE id = ?`);
+  const activate = database.prepare(`UPDATE ${table} SET active = 1, updated_at = ? WHERE id = ?`);
   const deactivate = database.prepare(`UPDATE ${table} SET active = 0, updated_at = ? WHERE id = ?`);
   const list = database.prepare(`SELECT * FROM ${table} WHERE (@active IS NULL OR active = @active) ORDER BY name, id LIMIT @limit OFFSET @offset`);
+  const productField = { brands: 'brand_id', categories: 'category_id' }[table];
+  const references = productField && database.prepare(`SELECT COUNT(*) AS count FROM products WHERE ${productField} = ?`);
+  const remove = productField && database.prepare(`DELETE FROM ${table} WHERE id = ?`);
   return {
+    ...(productField ? {
+      productCount: (id) => references.get(id).count,
+      delete: (id) => { remove.run(id); return { id }; },
+    } : {}),
     get: (id) => get.get(id),
     list: (filters) => list.all(filters),
     create(name) { return get.get(insert.run(name, new Date().toISOString()).lastInsertRowid); },
     update(id, name) { update.run(name, new Date().toISOString(), id); return get.get(id); },
+    activate(id) { activate.run(new Date().toISOString(), id); return get.get(id); },
     deactivate(id) { deactivate.run(new Date().toISOString(), id); return get.get(id); },
   };
 }
@@ -25,6 +34,7 @@ function createProductRepository(database) {
   const insert = database.prepare(`INSERT INTO products (${productFields.join(',')}, updated_at)
     VALUES (${productFields.map((field) => `@${field}`).join(',')}, @updated_at)`);
   const update = database.prepare(`UPDATE products SET ${productFields.map((field) => `${field} = @${field}`).join(',')}, updated_at = @updated_at WHERE id = @id`);
+  const activate = database.prepare('UPDATE products SET active = 1, updated_at = ? WHERE id = ?');
   const deactivate = database.prepare('UPDATE products SET active = 0, updated_at = ? WHERE id = ?');
   // instr implements literal substring searches: SQL wildcards have no special meaning.
   const list = database.prepare(`${select} WHERE (@active IS NULL OR p.active = @active)
@@ -45,6 +55,7 @@ function createProductRepository(database) {
       return row;
     },
     update(id, data) { update.run({ ...data, id, updated_at: new Date().toISOString() }); return get.get(id); },
+    activate(id) { activate.run(new Date().toISOString(), id); return get.get(id); },
     deactivate(id) { deactivate.run(new Date().toISOString(), id); return get.get(id); },
   };
 }

@@ -17,7 +17,7 @@ function createCatalogServices(database) {
       throw error;
     }
   }
-  function lookup(repository) {
+  function lookup(repository, singular) {
     return {
       list: (filters) => repository.list(v.filters(filters)),
       create(data) {
@@ -30,7 +30,16 @@ function createCatalogServices(database) {
         const name = v.text(data.name, 'name');
         return write(() => { required(repository, id); return repository.update(id, name); });
       },
+      activate(id) { return write(() => { required(repository, id); return repository.activate(id); }); },
       deactivate(id) { return write(() => { required(repository, id); return repository.deactivate(id); }); },
+      delete(id) {
+        return write(() => {
+          required(repository, id);
+          const count = repository.productCount(id);
+          if (count > 0) throw new v.CatalogError('CONFLICT', `Cannot delete this ${singular} because it is used by ${count} ${count === 1 ? 'product' : 'products'}. Reassign those products or deactivate the ${singular} instead.`);
+          return repository.delete(id);
+        });
+      },
     };
   }
   function productData(data, current) {
@@ -56,13 +65,14 @@ function createCatalogServices(database) {
     return result;
   }
   return {
-    brands: lookup(brands),
-    categories: lookup(categories),
+    brands: lookup(brands, 'brand'),
+    categories: lookup(categories, 'category'),
     products: {
       getById: (id) => required(products, id),
       list: (filters) => products.list(v.filters(filters, true)),
       create: (data) => write(() => products.create(productData(data))),
       update: (id, data) => write(() => products.update(id, productData(data, required(products, id)))),
+      activate: (id) => write(() => { required(products, id); return products.activate(id); }),
       deactivate: (id) => write(() => { required(products, id); return products.deactivate(id); }),
     },
   };

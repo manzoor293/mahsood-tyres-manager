@@ -1,5 +1,6 @@
+import StatusBadge from '../StatusBadge.jsx';
 import { useEffect, useState } from 'react';
-import { Alert, Button, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField } from '@mui/material';
+import { Alert, Button, Checkbox, CircularProgress, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, FormControlLabel, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField } from '@mui/material';
 import { catalogApi, catalogRequest } from '../../utils/catalog.js';
 
 const pageSize = 25;
@@ -20,6 +21,9 @@ export default function LookupManagerDialog({ resource, onClose, onChanged }) {
   const [busy, setBusy] = useState(false);
   const [confirmation, setConfirmation] = useState(null);
   const [confirmationError, setConfirmationError] = useState('');
+  const [deleting, setDeleting] = useState(null);
+  const [deleteAcknowledged, setDeleteAcknowledged] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
 
   useEffect(() => {
     let cancelled = false;
@@ -60,6 +64,15 @@ export default function LookupManagerDialog({ resource, onClose, onChanged }) {
       if (failure.code === 'CONFLICT') setFieldError('This name is already used, including by inactive records.');
     } finally { setBusy(false); }
   }
+  async function activate(row) {
+    if (busy) return;
+    setBusy(true); setError(''); setSuccess('');
+    try {
+      await catalogRequest(() => catalogApi()[resource].activate(row.id));
+      changed(`${singular} activated.`);
+    } catch (failure) { setError(failure.message); }
+    finally { setBusy(false); }
+  }
   async function deactivate() {
     if (busy) return;
     setBusy(true); setConfirmationError(''); setSuccess('');
@@ -70,9 +83,19 @@ export default function LookupManagerDialog({ resource, onClose, onChanged }) {
     } catch (failure) { setConfirmationError(failure.message); }
     finally { setBusy(false); }
   }
+  async function deletePermanently() {
+    if (busy || !deleting || !deleteAcknowledged) return;
+    setBusy(true); setDeleteError(''); setSuccess('');
+    try {
+      await catalogRequest(() => catalogApi()[resource].delete(deleting.id));
+      setDeleting(null);
+      changed(`${singular} permanently deleted.`);
+    } catch (failure) { setDeleteError(failure.message); }
+    finally { setBusy(false); }
+  }
   return (
     <>
-      <Dialog open fullWidth maxWidth="sm" onClose={() => { if (!busy && !confirmation) onClose(); }} aria-labelledby="lookup-manager-title">
+      <Dialog open fullWidth maxWidth="sm" onClose={() => { if (!busy && !confirmation && !deleting) onClose(); }} aria-labelledby="lookup-manager-title">
         <DialogTitle id="lookup-manager-title">Manage {plural}</DialogTitle>
         <DialogContent dividers>
           <p className="mb-4 text-sm text-slate-500">Keep your {expense ? 'expense categories' : `product ${resource === 'brands' ? 'brands' : 'categories'}`} organized. Deactivated entries remain linked to existing {expense ? 'expenses' : 'products'}.</p>
@@ -99,10 +122,12 @@ export default function LookupManagerDialog({ resource, onClose, onChanged }) {
                   <TableHead><TableRow><TableCell>Name</TableCell><TableCell>Status</TableCell><TableCell align="right">Actions</TableCell></TableRow></TableHead>
                   <TableBody>{list.rows.map((row) => <TableRow key={row.id} data-lookup-id={row.id}>
                     <TableCell sx={{ overflowWrap: 'anywhere', maxWidth: 200 }}>{row.name}</TableCell>
-                    <TableCell><Chip size="small" variant="outlined" color={row.active ? 'success' : 'default'} label={row.active ? 'Active' : 'Inactive'} /></TableCell>
+                    <TableCell><StatusBadge size="small" variant="outlined" color={row.active ? 'success' : 'default'} label={row.active ? 'Active' : 'Inactive'} /></TableCell>
                     <TableCell align="right">
                       <Button size="small" disabled={busy} aria-label={`Edit ${singular.toLowerCase()} ${row.name}`} onClick={() => { setEditing(row); setName(row.name); setError(''); setFieldError(''); setSuccess(''); }}>Edit</Button>
+                      {!row.active && <Button size="small" disabled={busy} aria-label={`Activate ${singular.toLowerCase()} ${row.name}`} onClick={() => activate(row)}>Activate</Button>}
                       {Boolean(row.active) && <Button size="small" color="warning" disabled={busy} aria-label={`Deactivate ${singular.toLowerCase()} ${row.name}`} onClick={() => { setConfirmation(row); setConfirmationError(''); }}>Deactivate</Button>}
+                      {!expense && <Button size="small" color="error" variant="outlined" sx={{ ml: 2 }} disabled={busy} aria-label={`Delete ${singular.toLowerCase()} ${row.name}`} onClick={() => { setDeleting(row); setDeleteAcknowledged(false); setDeleteError(''); }}>Delete</Button>}
                     </TableCell>
                   </TableRow>)}</TableBody>
                 </Table></TableContainer>}
@@ -122,6 +147,15 @@ export default function LookupManagerDialog({ resource, onClose, onChanged }) {
         </DialogContent>
         <DialogActions><Button disabled={busy} onClick={() => setConfirmation(null)}>Cancel</Button><Button color="warning" variant="contained" disabled={busy} onClick={deactivate}>{busy ? 'Deactivating…' : `Deactivate ${singular}`}</Button></DialogActions>
       </Dialog>
+      {!expense && <Dialog open={Boolean(deleting)} fullWidth maxWidth="xs" onClose={() => { if (!busy) setDeleting(null); }} aria-labelledby="lookup-delete-title">
+        <DialogTitle id="lookup-delete-title">Permanently delete {singular.toLowerCase()}?</DialogTitle>
+        <DialogContent>
+          <DialogContentText>Delete “{deleting?.name}” permanently? This cannot be undone. Records used by any product cannot be deleted.</DialogContentText>
+          <FormControlLabel control={<Checkbox checked={deleteAcknowledged} disabled={busy} onChange={(event) => setDeleteAcknowledged(event.target.checked)} />} label="I understand this deletion cannot be undone." />
+          {deleteError && <Alert severity="error" sx={{ mt: 2 }}>{deleteError}</Alert>}
+        </DialogContent>
+        <DialogActions><Button autoFocus disabled={busy} onClick={() => setDeleting(null)}>Cancel</Button><Button color="error" variant="contained" disabled={busy || !deleteAcknowledged} onClick={deletePermanently}>{busy ? 'Deleting…' : 'Delete permanently'}</Button></DialogActions>
+      </Dialog>}
     </>
   );
 }

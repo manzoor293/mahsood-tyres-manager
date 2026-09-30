@@ -31,6 +31,15 @@ export default function ProductsPage() {
     catch (error) { setActionError(error.message); }
     finally { setEditLoading(false); }
   }
+  async function activate(product) {
+    if (deactivating) return;
+    setDeactivating(true); setActionError('');
+    try {
+      await catalogRequest(() => catalogApi().products.activate(product.id));
+      saved('Product activated.');
+    } catch (error) { setActionError(error.message); }
+    finally { setDeactivating(false); }
+  }
   async function confirmDeactivate() {
     if (deactivating) return;
     setDeactivating(true);
@@ -78,7 +87,7 @@ export default function ProductsPage() {
           : !catalog.rows.length ? <div className="flex min-h-64 flex-col items-center justify-center px-6 py-10 text-center" role="status">
             <div className="mb-4 rounded-2xl bg-teal-50 p-4 text-teal-700"><AppIcon name="tyre" size={30} /></div>
             <h2 className="text-lg font-semibold">No products found</h2><p className="mt-2 text-sm text-slate-500">Try different filters, or add a product to your catalogue.</p>
-          </div> : <ProductTable rows={catalog.rows} onEdit={edit} onDeactivate={(product) => { setConfirmationError(''); setDeactivate(product); }} busy={editLoading || catalog.options.loading || Boolean(catalog.options.error)} />}
+          </div> : <ProductTable rows={catalog.rows} onEdit={edit} onActivate={activate} onDeactivate={(product) => { setConfirmationError(''); setDeactivate(product); }} busy={deactivating || editLoading || catalog.options.loading || Boolean(catalog.options.error)} />}
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 px-5 py-3">
           <span className="text-xs text-slate-500" aria-live="polite">{catalog.loading ? 'Loading…' : catalog.rows.length ? `Showing ${page * pageSize + 1}–${page * pageSize + catalog.rows.length} · Page ${page + 1}` : '0 products on this page'}</span>
           <div className="flex gap-2"><Button size="small" disabled={page === 0 || catalog.loading} onClick={() => setPage((value) => value - 1)}>Previous</Button><Button size="small" disabled={!catalog.hasNext || catalog.loading} onClick={() => setPage((value) => value + 1)}>Next</Button></div>

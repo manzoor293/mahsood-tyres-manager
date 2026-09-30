@@ -68,6 +68,7 @@ contextBridge.exposeInMainWorld('api', {
     list: (filters) => ipcRenderer.invoke('expenseCategories:list', filters),
     create: (data) => ipcRenderer.invoke('expenseCategories:create', data),
     update: (id, data) => ipcRenderer.invoke('expenseCategories:update', id, data),
+    activate: (id) => ipcRenderer.invoke('expenseCategories:activate', id),
     deactivate: (id) => ipcRenderer.invoke('expenseCategories:deactivate', id),
   },
   sales: {
@@ -80,6 +81,7 @@ contextBridge.exposeInMainWorld('api', {
     getById: (id) => ipcRenderer.invoke('customers:getById', id),
     create: (data) => ipcRenderer.invoke('customers:create', data),
     update: (id, data) => ipcRenderer.invoke('customers:update', id, data),
+    activate: (id) => ipcRenderer.invoke('customers:activate', id),
     deactivate: (id) => ipcRenderer.invoke('customers:deactivate', id),
   },
   inventory: {
@@ -98,25 +100,31 @@ contextBridge.exposeInMainWorld('api', {
     getById: (id) => ipcRenderer.invoke('suppliers:getById', id),
     create: (data) => ipcRenderer.invoke('suppliers:create', data),
     update: (id, data) => ipcRenderer.invoke('suppliers:update', id, data),
+    activate: (id) => ipcRenderer.invoke('suppliers:activate', id),
     deactivate: (id) => ipcRenderer.invoke('suppliers:deactivate', id),
   },
   brands: {
     list: (filters) => ipcRenderer.invoke('catalog:brands:list', filters),
     create: (data) => ipcRenderer.invoke('catalog:brands:create', data),
     update: (id, data) => ipcRenderer.invoke('catalog:brands:update', id, data),
+    activate: (id) => ipcRenderer.invoke('catalog:brands:activate', id),
     deactivate: (id) => ipcRenderer.invoke('catalog:brands:deactivate', id),
+    delete: (id) => ipcRenderer.invoke('catalog:brands:delete', id),
   },
   categories: {
     list: (filters) => ipcRenderer.invoke('catalog:categories:list', filters),
     create: (data) => ipcRenderer.invoke('catalog:categories:create', data),
     update: (id, data) => ipcRenderer.invoke('catalog:categories:update', id, data),
+    activate: (id) => ipcRenderer.invoke('catalog:categories:activate', id),
     deactivate: (id) => ipcRenderer.invoke('catalog:categories:deactivate', id),
+    delete: (id) => ipcRenderer.invoke('catalog:categories:delete', id),
   },
   products: {
     list: (filters) => ipcRenderer.invoke('catalog:products:list', filters),
     getById: (id) => ipcRenderer.invoke('catalog:products:getById', id),
     create: (data) => ipcRenderer.invoke('catalog:products:create', data),
     update: (id, data) => ipcRenderer.invoke('catalog:products:update', id, data),
+    activate: (id) => ipcRenderer.invoke('catalog:products:activate', id),
     deactivate: (id) => ipcRenderer.invoke('catalog:products:deactivate', id),
   },
 });

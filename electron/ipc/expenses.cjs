@@ -1,6 +1,6 @@
 const { CatalogError } = require('../services/validation.cjs');
 function registerExpenseIpc(ipcMain,services,isTrustedSender) {
-  const resources = { expenses: { list:[0,1],getById:[1,1],create:[1,1],update:[2,2] }, expenseCategories: { list:[0,1],create:[1,1],update:[2,2],deactivate:[1,1] } };
+  const resources = { expenses: { list:[0,1],getById:[1,1],create:[1,1],update:[2,2] }, expenseCategories: { list:[0,1],create:[1,1],update:[2,2],activate:[1,1],deactivate:[1,1] } };
   const channels=[];
   for (const [resource,methods] of Object.entries(resources)) for (const [method,[min,max]] of Object.entries(methods)) {
     const channel=`${resource}:${method}`; channels.push(channel);

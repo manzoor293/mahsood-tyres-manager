@@ -1,5 +1,6 @@
+import StatusBadge from '../components/StatusBadge.jsx';
 import { useState } from 'react';
-import { Alert, Button, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, LinearProgress, Paper, Snackbar, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField } from '@mui/material';
+import { Alert, Button, CircularProgress, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, LinearProgress, Paper, Snackbar, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField } from '@mui/material';
 import SupplierDialog from '../components/suppliers/SupplierDialog.jsx';
 import AppIcon from '../components/AppIcon.jsx';
 import useSuppliers, { supplierPageSize } from '../hooks/useSuppliers.js';
@@ -21,6 +22,15 @@ export default function SuppliersPage() {
     setBusy(true); setActionError('');
     try { setEditor({ supplier: await catalogRequest(() => window.api.suppliers.getById(row.id)) }); }
     catch (error) { setActionError(error.message); }
+    finally { setBusy(false); }
+  }
+  async function activate(row) {
+    if (busy) return;
+    setBusy(true); setActionError('');
+    try {
+      await catalogRequest(() => window.api.suppliers.activate(row.id));
+      saved('Supplier activated.');
+    } catch (error) { setActionError(error.message); }
     finally { setBusy(false); }
   }
   async function deactivate() {
@@ -50,8 +60,8 @@ export default function SuppliersPage() {
                 <TableHead><TableRow>{['Name', 'Phone', 'Address', 'Notes', 'Status', 'Actions'].map((label) => <TableCell key={label}>{label}</TableCell>)}</TableRow></TableHead>
                 <TableBody>{list.rows.map((row) => <TableRow key={row.id} hover data-supplier-id={row.id}>
                   {[row.name, row.phone, row.address, row.notes].map((value, index) => <TableCell key={index} sx={{ maxWidth: 240, overflowWrap: 'anywhere', whiteSpace: 'pre-wrap' }}>{value || '—'}</TableCell>)}
-                  <TableCell><Chip size="small" variant="outlined" color={row.active ? 'success' : 'default'} label={row.active ? 'Active' : 'Inactive'} /></TableCell>
-                  <TableCell sx={{ whiteSpace: 'nowrap' }}><Button size="small" disabled={busy} aria-label={`Edit supplier ${row.name}`} onClick={() => edit(row)}>Edit</Button>{Boolean(row.active) && <Button size="small" color="warning" disabled={busy} aria-label={`Deactivate supplier ${row.name}`} onClick={() => { setConfirmation(row); setConfirmationError(''); }}>Deactivate</Button>}</TableCell>
+                  <TableCell><StatusBadge size="small" variant="outlined" color={row.active ? 'success' : 'default'} label={row.active ? 'Active' : 'Inactive'} /></TableCell>
+                  <TableCell sx={{ whiteSpace: 'nowrap' }}><Button size="small" disabled={busy} aria-label={`Edit supplier ${row.name}`} onClick={() => edit(row)}>Edit</Button>{!row.active && <Button size="small" disabled={busy} aria-label={`Activate supplier ${row.name}`} onClick={() => activate(row)}>Activate</Button>}{Boolean(row.active) && <Button size="small" color="warning" disabled={busy} aria-label={`Deactivate supplier ${row.name}`} onClick={() => { setConfirmation(row); setConfirmationError(''); }}>Deactivate</Button>}</TableCell>
                 </TableRow>)}</TableBody>
               </Table></TableContainer>}
         <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 px-5 py-3"><span className="text-xs text-slate-500" aria-live="polite">{list.loading ? 'Loading…' : list.rows.length ? `Showing ${page * supplierPageSize + 1}–${page * supplierPageSize + list.rows.length} · Page ${page + 1}` : '0 suppliers on this page'}</span><div><Button disabled={page === 0 || list.loading} onClick={() => setPage((value) => value - 1)}>Previous</Button><Button disabled={!list.hasNext || list.loading} onClick={() => setPage((value) => value + 1)}>Next</Button></div></div>

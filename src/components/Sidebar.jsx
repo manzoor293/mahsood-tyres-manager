@@ -2,13 +2,16 @@ import ListItemButton from '@mui/material/ListItemButton';
 import { NavLink } from 'react-router-dom';
 import { navigation } from '../routes/navigation.js';
 import AppIcon from './AppIcon.jsx';
+import businessLogo from '../assets/mahsood-tyres-logo.png';
 
 export default function Sidebar() {
   return (
     <aside className="flex h-full w-52 shrink-0 flex-col bg-slate-900 text-slate-300 lg:w-60">
-      <div className="flex items-center gap-3 border-b border-white/10 px-5 py-6">
-        <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-teal-500/15 text-teal-300"><AppIcon name="tyre" size={26} /></div>
-        <div><p className="text-sm font-bold tracking-widest text-white">MAHSOOD</p><p className="mt-1 text-xs text-slate-400">Tyre Manager</p></div>
+      <div className="shrink-0 border-b border-white/10 px-5 py-4 text-center">
+        <div className="rounded-xl bg-white p-2">
+          <img src={businessLogo} alt="Mahsood Tyres logo" width="384" height="216" className="h-24 w-full object-contain" />
+        </div>
+        <p className="mt-3 text-lg font-semibold text-white">Mahsood Tyres</p>
       </div>
       <nav aria-label="Main navigation" className="min-h-0 flex-1 overflow-y-auto px-3 py-6">
         <p className="mb-3 px-3 text-[10px] font-semibold tracking-[0.18em] text-slate-500">WORKSPACE</p>

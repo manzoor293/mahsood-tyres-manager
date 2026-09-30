@@ -14,6 +14,7 @@ function createSupplierService(database) {
     getById: required,
     create: (data) => database.transaction(() => repository.create(supplierData(data))).immediate(),
     update: (value, data) => database.transaction(() => repository.update(value, supplierData(data, required(value)))).immediate(),
+    activate: (value) => database.transaction(() => { required(value); return repository.activate(value); }).immediate(),
     deactivate: (value) => database.transaction(() => { required(value); return repository.deactivate(value); }).immediate(),
   };
 }

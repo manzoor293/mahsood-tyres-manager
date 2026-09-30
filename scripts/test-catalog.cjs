@@ -89,6 +89,47 @@ app.whenReady().then(async () => {
     database.exec('DROP TRIGGER test_inventory_failure');
     console.log('PASS: migration preservation, catalog CRUD/deactivation, validation, search/pagination, zero inventory, transaction rollback.');
 
+    const tables = database.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'").all().map(row => row.name);
+    const snapshot = () => Object.fromEntries(tables.map(table => [table, database.prepare(`SELECT * FROM "${table}"`).all()]));
+    for (const [resource, field, linked] of [['brands','brand_id',brand], ['categories','category_id',category]]) {
+      const api = services[resource];
+      for (const id of [0, -1, '1', null, {}, 1.5]) rejects(() => api.delete(id), 'VALIDATION');
+      rejects(() => api.delete(999999), 'NOT_FOUND');
+      const before = snapshot();
+      assert.throws(() => api.delete(linked.id), error => error.code === 'CONFLICT' && error.message.includes('used by 2 products'));
+      assert.deepEqual(snapshot(), before); // Includes the inactive product and lookup.
+      assert.throws(() => database.prepare(`DELETE FROM ${resource} WHERE id=?`).run(linked.id), /FOREIGN KEY constraint failed/);
+      for (const inactive of [false, true]) {
+        const unused = api.create({ name: `Unused ${resource} ${inactive}` });
+        if (inactive) api.deactivate(unused.id);
+        const beforeDelete = snapshot();
+        api.delete(unused.id);
+        assert.equal(database.prepare(`SELECT * FROM ${resource} WHERE id=?`).get(unused.id), undefined);
+        assert.ok(!api.list({ active: 'all' }).some(row => row.id === unused.id));
+        beforeDelete[resource] = beforeDelete[resource].filter(row => row.id !== unused.id);
+        assert.deepEqual(snapshot(), beforeDelete);
+      }
+      const stale = api.create({ name: `Stale ${resource}` });
+      const other = openDatabase(path.join(directory, 'catalog.sqlite3'));
+      try {
+        createCatalogServices(other).products.create({ ...data, sku: `STALE-${resource}`,
+          brand_id: activeBrand.id, category_id: activeCategory.id, [field]: stale.id });
+      } finally { other.close(); }
+      const staleBefore = snapshot();
+      assert.throws(() => api.delete(stale.id), error => error.code === 'CONFLICT' && error.message.includes('used by 1 product.'));
+      assert.deepEqual(snapshot(), staleBefore);
+      const rollback = api.create({ name: `Delete rollback ${resource}` });
+      database.exec(`CREATE TRIGGER delete_failure AFTER DELETE ON ${resource} BEGIN SELECT RAISE(ABORT,'Delete failure'); END`);
+      const rollbackBefore = snapshot();
+      assert.throws(() => api.delete(rollback.id), /Delete failure/);
+      assert.deepEqual(snapshot(), rollbackBefore);
+      database.exec('DROP TRIGGER delete_failure');
+      api.delete(rollback.id);
+    }
+    assert.equal(typeof services.products.delete, 'undefined');
+    assert.equal(database.pragma('user_version', { simple: true }), 4);
+    console.log('PASS: brand/category permanent deletion, active/inactive unused rows, counts including inactive products, unchanged database on rejection, stale references from another connection, FK protection and delete rollback.');
+
     const html = path.join(directory, 'ipc.html');
     fs.writeFileSync(html, '<!doctype html><title>Catalog IPC test</title>');
     window = new BrowserWindow({ show: false, webPreferences: {
@@ -124,7 +165,26 @@ app.whenReady().then(async () => {
     assert.equal(result.unknown.error.code, 'VALIDATION');
     assert.equal(result.node, 'undefined');
     assert.equal(result.invoke, 'undefined');
-    assert.equal(['brands', 'categories', 'products'].flatMap((resource) => result.methods[resource]).length, 13);
+    assert.equal(['brands', 'categories', 'products'].flatMap((resource) => result.methods[resource]).length, 18);
+    for (const resource of ['brands', 'categories']) {
+      const deleted = await window.webContents.executeJavaScript(`(async () => {
+        const row = await window.api.${resource}.create({name:'IPC unused'});
+        return { row, result:await window.api.${resource}.delete(row.data.id), missing:await window.api.${resource}.delete(row.data.id), invalid:await window.api.${resource}.delete('1') };
+      })()`);
+      assert.equal(deleted.result.ok, true);
+      assert.equal(deleted.missing.error.code, 'NOT_FOUND');
+      assert.equal(deleted.invalid.error.code, 'VALIDATION');
+      assert.equal(database.prepare(`SELECT * FROM ${resource} WHERE id=?`).get(deleted.row.data.id), undefined);
+      const handlers = new Map();
+      registerCatalogIpc({ handle: (channel, handler) => handlers.set(channel, handler) }, services, guard);
+      const handler = handlers.get(`catalog:${resource}:delete`);
+      const event = { sender: window.webContents, senderFrame: window.webContents.mainFrame };
+      assert.equal(handler(event).error.code, 'VALIDATION');
+      assert.equal(handler(event, 1, 'extra').error.code, 'VALIDATION');
+      assert.equal(handler({}, 1).error.code, 'FORBIDDEN');
+    }
+    assert.equal(result.methods.products.includes('delete'), false);
+    assert.equal(result.methods.expenseCategories.includes('delete'), false);
     allowed.clear();
     const forbidden = await window.webContents.executeJavaScript('window.api.products.list()');
     assert.equal(forbidden.error.code, 'FORBIDDEN');
@@ -132,7 +192,7 @@ app.whenReady().then(async () => {
     await window.loadURL('data:text/html,<title>Untrusted</title>');
     assert.equal(guard({ sender: window.webContents, senderFrame: window.webContents.mainFrame }), false);
     assert.deepEqual(database.pragma('foreign_key_check'), []);
-    console.log('PASS: all 13 preload APIs over real IPC, validation errors, untrusted sender/frame rejection, no renderer Node or generic invoke API.');
+    console.log('PASS: catalog preload APIs over real IPC, validation errors, untrusted sender/frame rejection, no renderer Node or generic invoke API.');
   } catch (error) {
     code = 1;
     console.error('FAIL:', error);

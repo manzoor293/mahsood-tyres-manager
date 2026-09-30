@@ -11,6 +11,7 @@ const {registerPrintingIpc}=require('./ipc/printing.cjs');
 const {createReturnServices}=require('./services/returns.cjs');
 const {registerReturnIpc}=require('./ipc/returns.cjs');
 const path = require('node:path');
+const { existsSync } = require('node:fs');
 const { pathToFileURL } = require('node:url');
 const { createCatalogServices } = require('./services/catalog.cjs');
 const { createDashboardService } = require('./services/dashboard.cjs');
@@ -45,8 +46,13 @@ const rendererUrl = development ? `http://127.0.0.1:${developmentPort}/`
   : pathToFileURL(path.join(__dirname, '../dist/index.html')).href;
 
 async function createWindow() {
+  // Packagers can copy build/icon.ico into resources; source runs use build/.
+  const iconPath = app.isPackaged
+    ? path.join(process.resourcesPath, 'icon.ico')
+    : path.join(app.getAppPath(), 'build/icon.ico');
   const window = new BrowserWindow({
     title: 'Mahsood Tyre Manager',
+    ...(existsSync(iconPath) ? { icon: iconPath } : {}),
     width: 1100,
     height: 760,
     minWidth: 640,

@@ -1,7 +1,7 @@
 const { CatalogError } = require('../services/validation.cjs');
 
 function registerCustomerIpc(ipcMain, service, isTrustedSender) {
-  const methods = { list: [0, 1], getById: [1, 1], create: [1, 1], update: [2, 2], deactivate: [1, 1] };
+  const methods = { list: [0, 1], getById: [1, 1], create: [1, 1], update: [2, 2], activate: [1, 1], deactivate: [1, 1] };
   for (const [method, [min, max]] of Object.entries(methods)) {
     ipcMain.handle(`customers:${method}`, (event, ...args) => {
       try {

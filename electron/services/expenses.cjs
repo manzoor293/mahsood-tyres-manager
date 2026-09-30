@@ -44,6 +44,7 @@ function createExpenseServices(db) {
       list: (filters) => categories.list(v.filters(filters)),
       create(input) { v.object(input,['name']); const name=v.text(input.name,'Category name'); return write(()=>categories.create(name)); },
       update(id,input) { v.object(input,['name']); const name=v.text(input.name,'Category name'); return write(()=>{ required(categories,id); return categories.update(id,name); }); },
+      activate: (id) => write(()=>{ required(categories,id); return categories.activate(id); }),
       deactivate: (id) => write(()=>{ required(categories,id); return categories.deactivate(id); }),
     },
     expenses: {
