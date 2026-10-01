@@ -5,6 +5,7 @@
   "description": "Sales, Inventory & Shop Management System",
   "type": "module",
   "main": "electron/main.cjs",
+  "author": "Manzoor-Ahmad",
   "scripts": {
     "test:auth": "node scripts/test-products-ui.mjs --auth-backend",
     "test:auth:ui": "node scripts/test-products-ui.mjs --auth-ui",
@@ -48,7 +49,9 @@
     "test:purchase-returns": "node scripts/test-products-ui.mjs --purchase-returns-backend",
     "test:purchase-returns:ui": "node scripts/test-products-ui.mjs --purchase-returns",
     "test:printing": "node scripts/test-products-ui.mjs --printing-backend",
-    "test:printing:ui": "node scripts/test-products-ui.mjs --printing"
+    "test:printing:ui": "node scripts/test-products-ui.mjs --printing",
+    "postinstall": "electron-builder install-app-deps",
+    "dist": "npm run build && electron-builder --win nsis --x64"
   },
   "engines": {
     "node": ">=22.12.0"
@@ -66,7 +69,46 @@
     "@tailwindcss/vite": "^4.3.3",
     "@vitejs/plugin-react": "^6.1.1",
     "electron": "^44.4.5",
+    "electron-builder": "^26.15.3",
     "tailwindcss": "^4.3.3",
     "vite": "^8.3.0"
+  },
+  "build": {
+    "appId": "com.mahsoodtyres.manager",
+    "productName": "Mahsood Tyre Manager",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "asar": true,
+    "asarUnpack": [
+      "node_modules/better-sqlite3/**/*"
+    ],
+    "npmRebuild": true,
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Mahsood Tyre Manager",
+      "deleteAppDataOnUninstall": false
+    }
   }
 }
