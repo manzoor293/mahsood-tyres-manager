@@ -58,8 +58,6 @@ export default function PaymentTable({
             aria-label={history ? "Payment history" : "Open invoices"}
             sx={{
               minWidth: 850,
-              "& thead th": { bgcolor: "#f8fafc", fontWeight: 600 },
-              "& td": { py: 1.5 },
             }}
           >
             <TableHead>

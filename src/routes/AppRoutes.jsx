@@ -14,8 +14,10 @@ const ReportsPage = lazy(() => import("../pages/ReportsPage.jsx"));
 const ReturnsPage = lazy(() => import("../pages/ReturnsPage.jsx"));
 const PaymentsPage = lazy(() => import("../pages/PaymentsPage.jsx"));
 const SettingsPage = lazy(() => import("../pages/SettingsPage.jsx"));
+const LedgerPage = lazy(() => import("../pages/LedgerPage.jsx"));
 import { navigation } from "./navigation.js";
 const implementedPages = {
+  "/ledger": LedgerPage,
   "/settings": SettingsPage,
   "/returns": ReturnsPage,
   "/payments": PaymentsPage,

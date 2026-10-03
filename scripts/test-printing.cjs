@@ -43,7 +43,7 @@ app.whenReady().then(async () => {
       assert.equal(document.shop.ntn, "TEST-NTN");
       const html = renderDocument(document);
       assert.ok(html.startsWith("<!doctype html>"));
-      assert.ok(html.includes("@page { size: A4"));
+      assert.match(html, /@page\s*\{\s*size:\s*A4/);
       assert.ok(!html.includes("<script"));
     }
     const sale = service.getDocument("saleInvoice", 1);

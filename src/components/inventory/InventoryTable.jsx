@@ -57,8 +57,6 @@ export default function InventoryTable({
         aria-label={history ? "Stock Movements" : "Current Stock"}
         sx={{
           minWidth: 1050,
-          "& thead th": { bgcolor: "#f8fafc", fontWeight: 600 },
-          "& td": { py: 1.5 },
         }}
       >
         <TableHead>

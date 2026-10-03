@@ -1,5 +1,6 @@
-import { Paper } from "@mui/material";
+import { Box, Paper } from "@mui/material";
 import { formatPrice } from "../../utils/catalog.js";
+import { tableStyles } from "../../utils/tableStyles.js";
 
 export default function DashboardTrend({ rows, grouping, summary }) {
   const max = Math.max(1, ...rows.map((row) => row.revenue));
@@ -75,7 +76,12 @@ export default function DashboardTrend({ rows, grouping, summary }) {
           View trend values
         </summary>
         <div className="mt-2 max-h-60 overflow-auto">
-          <table className="w-full text-left" aria-label="Sales trend values">
+          <Box
+            component="table"
+            className="w-full text-left"
+            aria-label="Sales trend values"
+            sx={tableStyles}
+          >
             <thead>
               <tr>
                 <th scope="col">Period</th>
@@ -92,7 +98,7 @@ export default function DashboardTrend({ rows, grouping, summary }) {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </Box>
         </div>
       </details>
       <div className="mt-6 border-t border-slate-100 pt-5">

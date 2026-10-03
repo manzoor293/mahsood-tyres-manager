@@ -84,8 +84,6 @@ export default function ReportResults({
               aria-label={`${config.title} report`}
               sx={{
                 minWidth: 760,
-                "& thead th": { bgcolor: "#f8fafc", fontWeight: 600 },
-                "& td": { py: 1.5 },
               }}
             >
               <TableHead>

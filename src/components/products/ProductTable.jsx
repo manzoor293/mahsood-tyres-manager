@@ -29,12 +29,6 @@ export default function ProductTable({
         aria-label="Products"
         sx={{
           minWidth: 1450,
-          "& thead th": {
-            fontWeight: 600,
-            bgcolor: "#f8fafc",
-            whiteSpace: "nowrap",
-          },
-          "& td": { py: 1.5 },
         }}
       >
         <TableHead>
@@ -130,7 +124,7 @@ export default function ProductTable({
                   whiteSpace: "nowrap",
                   position: "sticky",
                   right: 0,
-                  bgcolor: "background.paper",
+                  bgcolor: "inherit",
                   borderLeft: "1px solid #e2e8f0",
                 }}
               >

@@ -1,4 +1,7 @@
 const { createAuthService } = require("./services/auth.cjs");
+const { createLedgerService } = require("./services/ledger.cjs");
+const { createLedgerPrintingService } = require("./services/ledger-printing.cjs");
+const { registerLedgerIpc } = require("./ipc/ledger.cjs");
 const { createAuthorizedIpc, registerAuthIpc } = require("./ipc/auth.cjs");
 const { app, BrowserWindow, session, ipcMain, dialog } = require("electron");
 const { createMaintenanceGate } = require("./ipc/maintenance.cjs");
@@ -112,6 +115,7 @@ function fail(error) {
 }
 
 function bindBusinessIpc(database, ipcMain) {
+  registerLedgerIpc(ipcMain, createLedgerService(database), createLedgerPrintingService(database, createPrintDriver()), createSenderGuard(allowedContents, rendererUrl));
   registerSettingsIpc(
     ipcMain,
     createSettingsService(database),

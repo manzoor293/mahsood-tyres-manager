@@ -66,6 +66,12 @@ export const navigation = [
     description: "A dedicated space for business reports.",
   },
   {
+    path: "/ledger",
+    title: "Ledger",
+    icon: "receipt",
+    description: "Customer and supplier account statements.",
+  },
+  {
     path: "/settings",
     title: "Settings",
     icon: "settings",

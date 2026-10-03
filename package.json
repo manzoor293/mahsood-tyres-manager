@@ -7,6 +7,8 @@
   "main": "electron/main.cjs",
   "author": "Manzoor-Ahmad",
   "scripts": {
+    "test:ledger": "node scripts/test-products-ui.mjs --ledger-backend",
+    "test:ledger:ui": "node scripts/test-products-ui.mjs --ledger-ui",
     "test:auth": "node scripts/test-products-ui.mjs --auth-backend",
     "test:auth:ui": "node scripts/test-products-ui.mjs --auth-ui",
     "test:status": "node scripts/test-products-ui.mjs --status-backend",
