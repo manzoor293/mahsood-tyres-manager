@@ -68,6 +68,13 @@ function createDocumentService(db,clock=()=>new Date()) {
       document.totals=[['Gross returned value',gross],['Allocated original discount',safeNumbers(BigInt(gross)-BigInt(record.total))],['Return adjustment total',record.total]];
       document.explanation='This document records a return adjustment at historical prices, including the allocated original discount. It does not record a cash refund or credit settlement.';
     }
+    if(document.items.length) {
+      const factors = new Set(document.items.map(item => item.units_per_transaction_unit));
+      const unit = factors.size === 1 ? (factors.has(2) ? 'Pair' : 'Tyre') : null;
+      document.quantityLabel = unit ? `Qty (${unit}s)` : 'Qty (unit shown)';
+      document.unitLabel = unit ? `Price / ${unit}` : 'Price / indicated unit';
+      document.mixedUnits = unit === null;
+    }
     const contact=invoice||record;
     document.contact={name:contact.contact_name||(sale?'Walk-in':'Supplier'),phone:contact.contact_phone,address:contact.contact_address};
     document.date=record.date;document.notes=record.notes;

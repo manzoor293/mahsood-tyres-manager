@@ -62,7 +62,7 @@ function createReturnRepository(db, c) {
         ? {
             ...row,
             items: prepare(
-              `SELECT ri.*,p.sku,p.model,p.size FROM ${k}_return_items ri JOIN ${k}_items i ON i.id=ri.${k}_item_id JOIN products p ON p.id=i.product_id WHERE ri.return_id=? ORDER BY ri.id`,
+              `SELECT ri.*,i.units_per_transaction_unit,p.sku,p.model,p.size FROM ${k}_return_items ri JOIN ${k}_items i ON i.id=ri.${k}_item_id JOIN products p ON p.id=i.product_id WHERE ri.return_id=? ORDER BY ri.id`,
             ).all(id),
           }
         : undefined;
@@ -97,7 +97,7 @@ function createReturnRepository(db, c) {
       ).run(
         item.product_id,
         c.movement,
-        c.sign * item.quantity,
+        c.sign * item.physical_quantity,
         item.id,
         item.unit_cost,
         data.notes,

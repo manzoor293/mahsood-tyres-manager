@@ -224,7 +224,7 @@ app.on("browser-window-created", (_, window) => {
       await click("View purchase PUR-RETURN");
       await click("Print Purchase");
       await preview();
-      assert.match(await previewHtml(), /Historical unit cost/);
+      assert.match(await previewHtml(), /Price \/ Tyre/);
       assert.match(await previewHtml(), /Rs\. 60\.00/);
       await closePreview();
       await click("Close");

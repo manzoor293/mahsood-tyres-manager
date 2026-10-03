@@ -69,7 +69,7 @@ app.whenReady().then(async () => {
     const purchase = service.getDocument("purchaseInvoice", 1);
     assert.equal(purchase.items[0].unit_value, 6000);
     assert.equal(purchase.contact.phone, "0300-1234567");
-    assert.match(renderDocument(purchase), /Historical unit cost/);
+    assert.match(renderDocument(purchase), /Price \/ Tyre/);
     const payment = service.getDocument("customerPayment", 4);
     assert.equal(payment.reference, "CP-000004");
     assert.equal(
@@ -347,7 +347,7 @@ app.whenReady().then(async () => {
       ).ok,
       true,
     );
-    assert.equal(db.pragma("user_version", { simple: true }), 5);
+    assert.equal(db.pragma("user_version", { simple: true }), 6);
     assert.deepEqual(db.pragma("foreign_key_check"), []);
     // Only intentional fixture changes occurred; printing APIs introduce no writes.
     const afterFixture = db.serialize();
@@ -355,7 +355,7 @@ app.whenReady().then(async () => {
     assert.deepEqual(db.serialize(), afterFixture);
     assert.notDeepEqual(protectedSnapshot, afterFixture);
     console.log(
-      "PASS Printing: six persisted documents, historical/current separation, payment-order balances, walk-in/legacy handling, cost exclusion, escaping, safe paise/filenames, fresh reads, IPC validation, output guard, native printer interception, cancellation/failures, real PDF generation, cleanup and schema-5 read-only behavior.",
+      "PASS Printing: six persisted documents, historical/current separation, payment-order balances, walk-in/legacy handling, cost exclusion, escaping, safe paise/filenames, fresh reads, IPC validation, output guard, native printer interception, cancellation/failures, real PDF generation, cleanup and schema-6 read-only behavior.",
     );
   } catch (error) {
     console.error(error);

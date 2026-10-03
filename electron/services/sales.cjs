@@ -1,4 +1,5 @@
 const v = require('./validation.cjs');
+const { physicalQuantity, multiply, pairCost } = require('./units.cjs');
 const { createSaleRepository } = require('../repositories/sales.cjs');
 function date(value, field) {
   if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value) || !Number.isFinite(Date.parse(value))
@@ -21,7 +22,7 @@ function createSaleService(db) {
     const product = repository.product(productId);
     if (!product?.active) v.invalid('Select existing active products only.');
     v.integer(product.quantity, 'Current stock');
-    if (quantity > product.quantity) throw new v.CatalogError('INSUFFICIENT_STOCK', `Insufficient stock for ${product.sku}. Only ${product.quantity} available; requested ${quantity}. Stock may have changed since selection.`);
+    if (quantity > product.quantity) throw new v.CatalogError('INSUFFICIENT_STOCK', `Insufficient stock for ${product.sku}. Only ${product.quantity} tyres available; requested ${quantity} tyres. Stock may have changed since selection.`);
     return product;
   }
   return {
@@ -59,8 +60,12 @@ function createSaleService(db) {
         const result = { product_id: v.id(item.product_id), quantity: v.integer(item.quantity,'Quantity',1), unit_price: v.integer(item.unit_price,'Unit price') };
         if (seen.has(result.product_id)) v.invalid('Each product may appear only once per sale.');
         seen.add(result.product_id);
-        result.unit_cost = v.integer(stock(result.product_id,result.quantity).unit_cost,'Historical unit cost');
-        const lineTotal = v.integer(result.quantity * result.unit_price,'Line total');
+        result.units_per_transaction_unit = 2;
+        result.physical_quantity = physicalQuantity(result.quantity);
+        const product = stock(result.product_id, result.physical_quantity);
+        result.unit_cost = pairCost(product.unit_cost, product.cost_units_per_unit);
+        multiply(result.quantity, result.unit_cost, 'Historical line cost');
+        const lineTotal = multiply(result.quantity, result.unit_price, 'Line total');
         data.subtotal = v.integer(data.subtotal + lineTotal,'Subtotal');
         return result;
       });
@@ -69,7 +74,7 @@ function createSaleService(db) {
       if (data.paid_amount > data.total) v.invalid('Paid amount cannot exceed the sale total.');
       const saleId = repository.insert(data);
       for (const item of items) {
-        stock(item.product_id,item.quantity); // Re-read immediately before each trigger-driven reduction.
+        stock(item.product_id,item.physical_quantity); // Re-read immediately before each trigger-driven reduction.
         repository.insertItem(saleId,item);
       }
       if (data.paid_amount > 0) repository.pay(saleId,data);

@@ -50,7 +50,7 @@ function createInventoryService(db) {
       if (data.expected_quantity !== undefined && v.integer(data.expected_quantity, 'Expected current stock') !== current)
         throw new v.CatalogError('CONFLICT', 'Stock changed since your review. Close and reopen the adjustment to review the latest quantity.');
       const change = data.movement_type === 'ADJUSTMENT_IN' ? quantity : -quantity;
-      if (current + change < 0) v.invalid(`Insufficient stock. Only ${current} units are available.`);
+      if (current + change < 0) v.invalid(`Insufficient stock. Only ${current} tyres are available.`);
       v.integer(current + change, 'Resulting stock');
       // Required schema cost is a reference only, not a stock valuation: last received cost, or zero if unknown.
       const movementId = repository.insert({ product_id: product.product_id, movement_type: data.movement_type,

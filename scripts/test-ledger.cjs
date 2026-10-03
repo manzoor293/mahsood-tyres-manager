@@ -89,7 +89,7 @@ app.whenReady().then(async()=>{
     authenticated=true;
     for(const handler of handlers.values()) assert.equal((await handler({trusted:true,sender:owner.webContents},{})).error.code,'VALIDATION');
     await printing.savePdf({party_type:'customer',party_id:1},owner);assert.deepEqual(db.serialize(),snapshot);
-    assert.equal(db.pragma('user_version',{simple:true}),5);assert.deepEqual(db.pragma('foreign_key_check'),[]);
-    console.log('PASS Ledger: both account types, empty/inactive/walk-in, partial/full/multiple payments, multiple returns, credits, historical openings, date totals, stable balances, pagination/reconciliation, validation/auth, escaped print previews, safe filenames, real 10/50/125-row PDFs, intercepted native print, window cleanup and schema-5 read-only compatibility.');
+    assert.equal(db.pragma('user_version',{simple:true}),6);assert.deepEqual(db.pragma('foreign_key_check'),[]);
+    console.log('PASS Ledger: both account types, empty/inactive/walk-in, partial/full/multiple payments, multiple returns, credits, historical openings, date totals, stable balances, pagination/reconciliation, validation/auth, escaped print previews, safe filenames, real 10/50/125-row PDFs, intercepted native print, window cleanup and schema-6 read-only compatibility.');
   } catch(error){console.error(error);code=1;} finally {owner?.destroy();db?.close();clearTimeout(timeout);app.exit(code);}
 });

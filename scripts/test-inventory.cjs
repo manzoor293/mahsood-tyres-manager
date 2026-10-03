@@ -38,7 +38,7 @@ app.whenReady().then(() => {
       supplier_id: 1,
       invoice_number: "INV-STOCK",
       purchased_at: "2026-09-25",
-      items: [{ product_id: 1, quantity: 12, unit_cost: 10000 }],
+      items: [{ product_id: 1, quantity: 6, unit_cost: 10000 }],
     });
     assert.equal(service.getProductStock(1).quantity, 12);
     const base = {
@@ -67,7 +67,7 @@ app.whenReady().then(() => {
       [13, 10, 12],
     );
     assert.equal(history[0].notes, "Damaged tyres");
-    assert.equal(history[0].unit_cost, 10000);
+    assert.equal(history[0].unit_cost, 5000);
     assert.equal(history[2].invoice_number, purchase.invoice_number);
     assert.equal(history[2].reference_type, "Purchase");
     assert.equal(history[0].reference_type, "Manual adjustment");

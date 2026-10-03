@@ -42,13 +42,14 @@ app.whenReady().then(async () => {
         ),
       );
     legacy.pragma("user_version=4");
-    seedBackup(legacy);
+    require("./returns-fixtures.cjs").seedReturns(legacy);
     const before = allData(legacy);
     legacy.close();
     db = openDatabase(filename);
-    assert.equal(db.pragma("user_version", { simple: true }), 5);
+    assert.equal(db.pragma("user_version", { simple: true }), 6);
     const after = allData(db);
     delete after.administrator;
+    for (const table of ["products", "purchase_items", "sale_items"]) for (const row of after[table]) { delete row.price_units_per_unit; delete row.units_per_transaction_unit; }
     assert.deepEqual(after, before);
     assert.equal(
       db
@@ -258,11 +259,11 @@ app.whenReady().then(async () => {
         hasAdministrator: false,
         authenticated: false,
       });
-      assert.equal(db.pragma("user_version", { simple: true }), 5);
+      assert.equal(db.pragma("user_version", { simple: true }), 6);
     }
     assert.deepEqual(db.pragma("foreign_key_check"), []);
     console.log(
-      "PASS: v4→v5 business-data preservation/rollback, one administrator, validation, normalization, scrypt storage, generic credential failures, sessions, IPC guards/concurrency, backup credentials and v1–v4 restores.",
+      "PASS: v4→v6 business-data preservation/rollback, one administrator, validation, normalization, scrypt storage, generic credential failures, sessions, IPC guards/concurrency, backup credentials and v1–v4 restores.",
     );
 
     const restartRoot = path.join(root, "restart-profile");

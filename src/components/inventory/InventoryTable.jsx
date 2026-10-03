@@ -1,3 +1,4 @@
+import { pairPrice, stockLabel, movementLabel } from '../../utils/units.js';
 import StatusBadge from "../StatusBadge.jsx";
 import {
   Button,
@@ -27,7 +28,7 @@ export default function InventoryTable({
         "Date / time",
         "SKU / Product",
         "Movement type",
-        "Change",
+        "Change (Tyres)",
         "Stock after movement",
         "Reference type",
         "Reference",
@@ -42,7 +43,7 @@ export default function InventoryTable({
         "Current Stock",
         "Minimum Stock",
         "Stock Status",
-        "Selling Price",
+        "Selling Price / Pair",
         "Actions",
       ];
   return (
@@ -90,10 +91,9 @@ export default function InventoryTable({
                     fontWeight: 600,
                   }}
                 >
-                  {row.quantity_change > 0 ? "+" : ""}
-                  {row.quantity_change}
+                  {movementLabel(row.quantity_change)}
                 </TableCell>
-                <TableCell>{row.resulting_quantity}</TableCell>
+                <TableCell>{stockLabel(row.resulting_quantity)}</TableCell>
                 <TableCell>{row.reference_type}</TableCell>
                 <TableCell>
                   {row.invoice_number || `Movement #${row.id}`}
@@ -119,10 +119,10 @@ export default function InventoryTable({
                 ].map((value, i) => (
                   <TableCell key={i}>{value}</TableCell>
                 ))}
-                <TableCell data-stock-quantity sx={{ fontWeight: 600 }}>
-                  {row.quantity}
+                <TableCell data-stock-quantity data-physical-quantity={row.quantity} sx={{ fontWeight: 600 }}>
+                  {stockLabel(row.quantity)}
                 </TableCell>
-                <TableCell>{row.minimum_stock}</TableCell>
+                <TableCell>{stockLabel(row.minimum_stock)}</TableCell>
                 <TableCell>
                   <StatusBadge
                     size="small"
@@ -144,7 +144,7 @@ export default function InventoryTable({
                   )}
                 </TableCell>
                 <TableCell sx={{ whiteSpace: "nowrap" }}>
-                  {formatPrice(row.default_selling_price)}
+                  {pairPrice(row) === null ? "Unavailable" : formatPrice(pairPrice(row))}
                 </TableCell>
                 <TableCell sx={{ whiteSpace: "nowrap" }}>
                   <Button

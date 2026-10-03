@@ -1,3 +1,4 @@
+import { stockLabel } from '../../utils/units.js';
 import { useEffect, useState } from "react";
 import { Autocomplete, TextField } from "@mui/material";
 import { catalogRequest } from "../../utils/catalog.js";
@@ -64,7 +65,7 @@ export default function SaleSelector({
                 : row.name}
               <div className="text-xs text-slate-500">
                 {kind === "products"
-                  ? `${row.stock_quantity} available`
+                  ? `${stockLabel(row.stock_quantity)} available`
                   : row.phone || "No phone"}
               </div>
             </div>
@@ -81,7 +82,7 @@ export default function SaleSelector({
           helperText={
             error ||
             (kind === "products"
-              ? "Search SKU, model, brand or size. Select again to add another unit."
+              ? "Search SKU, model, brand or size. Select again to add another pair."
               : "Search name, phone or address.")
           }
         />

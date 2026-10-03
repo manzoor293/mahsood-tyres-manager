@@ -1,3 +1,4 @@
+import { stockLabel, pairPrice } from '../../utils/units.js';
 import StatusBadge from "../StatusBadge.jsx";
 import {
   Button,
@@ -10,7 +11,9 @@ import {
   TableRow,
 } from "@mui/material";
 import { formatPrice } from "../../utils/catalog.js";
-function display(value, column) {
+function display(value, column, row) {
+  if (column.type === "stock") return stockLabel(value);
+  if (column.type === "pairPrice") { const price = pairPrice(row); return price === null ? "Unavailable" : formatPrice(price); }
   if (column.key === "payment_status")
     return <StatusBadge status={value} label={value || "—"} />;
   if (column.type === "money")
@@ -92,7 +95,7 @@ export default function ReportResults({
                     <TableCell
                       key={column.key}
                       align={
-                        ["money", "number"].includes(column.type)
+                        ["money", "number", "stock", "pairPrice"].includes(column.type)
                           ? "right"
                           : "left"
                       }
@@ -113,12 +116,12 @@ export default function ReportResults({
                       <TableCell
                         key={column.key}
                         align={
-                          ["money", "number"].includes(column.type)
+                          ["money", "number", "stock", "pairPrice"].includes(column.type)
                             ? "right"
                             : "left"
                         }
                         sx={
-                          ["money", "number", "date"].includes(column.type)
+                          ["money", "number", "date", "pairPrice"].includes(column.type)
                             ? { whiteSpace: "nowrap" }
                             : {
                                 minWidth: 100,
@@ -128,7 +131,7 @@ export default function ReportResults({
                               }
                         }
                       >
-                        {display(row[column.key], column)}
+                        {display(row[column.key], column, row)}
                       </TableCell>
                     ))}
                     {onSale && (

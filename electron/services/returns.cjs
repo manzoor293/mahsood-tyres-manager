@@ -1,4 +1,5 @@
 const v=require('./validation.cjs');
+const {physicalQuantity}=require('./units.cjs');
 const {safeNumbers,parseDate}=require('../utils/analytics.cjs');
 const {createReturnRepository,returnKinds}=require('../repositories/returns.cjs');
 
@@ -38,7 +39,8 @@ function createReturnServices(db) {
             if(entry.quantity>original.returnable_quantity)throw new v.CatalogError('OVER_RETURN','Quantity exceeds remaining returnable quantity. Refresh the invoice.');
             const prior=BigInt(original.returned_quantity),quantity=BigInt(entry.quantity),net=BigInt(original.net_line_value),sold=BigInt(original.quantity);
             const item={...original,quantity:entry.quantity,gross_value:safeNumbers(quantity*BigInt(original[c.price])),return_value:safeNumbers((prior+quantity)*net/sold-prior*net/sold)};
-            const needed=safeNumbers(BigInt(stockRequired.get(item.product_id)||0)+quantity);stockRequired.set(item.product_id,needed);
+            item.physical_quantity=physicalQuantity(entry.quantity, original.units_per_transaction_unit);
+            const needed=safeNumbers(BigInt(stockRequired.get(item.product_id)||0)+BigInt(item.physical_quantity));stockRequired.set(item.product_id,needed);
             if(c.sign<0&&needed>item.current_stock)throw new v.CatalogError('INSUFFICIENT_STOCK','Insufficient current stock for this purchase return.');
             if(c.sign>0)safeNumbers(BigInt(item.current_stock)+BigInt(needed));
             return item;

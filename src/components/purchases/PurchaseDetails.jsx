@@ -1,3 +1,4 @@
+import { quantityLabel, unitName } from '../../utils/units.js';
 import StatusBadge from "../StatusBadge.jsx";
 import PrintActions from "../printing/PrintActions.jsx";
 import {
@@ -41,7 +42,7 @@ export default function PurchaseDetails({ purchase: p, onClose }) {
           <Table aria-label="Purchase items">
             <TableHead>
               <TableRow>
-                {["Product", "Quantity", "Unit cost", "Line total"].map(
+                {["Product", "Quantity", "Price / indicated unit", "Line total"].map(
                   (label) => (
                     <TableCell key={label}>{label}</TableCell>
                   ),
@@ -54,8 +55,8 @@ export default function PurchaseDetails({ purchase: p, onClose }) {
                   <TableCell>
                     {item.sku} · {item.model} · {item.size}
                   </TableCell>
-                  <TableCell>{item.quantity}</TableCell>
-                  <TableCell>{formatPrice(item.unit_cost)}</TableCell>
+                  <TableCell>{quantityLabel(item.quantity, item.units_per_transaction_unit)}</TableCell>
+                  <TableCell>{formatPrice(item.unit_cost)} / {unitName(item.units_per_transaction_unit).toLowerCase()}</TableCell>
                   <TableCell>{formatPrice(item.line_total)}</TableCell>
                 </TableRow>
               ))}

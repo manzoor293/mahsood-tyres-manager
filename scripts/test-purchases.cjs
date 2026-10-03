@@ -53,7 +53,7 @@ app.whenReady().then(() => {
         .prepare("SELECT quantity FROM inventory ORDER BY product_id")
         .all()
         .map((r) => r.quantity),
-      [6, 3, 0],
+      [8, 6, 0],
     );
     const movements = db
       .prepare(
@@ -64,7 +64,7 @@ app.whenReady().then(() => {
     row.items.forEach((item, i) => {
       assert.equal(movements[i].purchase_item_id, item.id);
       assert.equal(movements[i].product_id, item.product_id);
-      assert.equal(movements[i].quantity_change, item.quantity);
+      assert.equal(movements[i].quantity_change, item.quantity * 2);
       assert.equal(movements[i].unit_cost, item.unit_cost);
     });
     assert.equal(row.payments[0].supplier_id, 1);

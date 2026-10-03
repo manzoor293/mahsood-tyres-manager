@@ -6,7 +6,7 @@ const localTime = (day, hour = 12) =>
 function seedDashboard(db) {
   db.exec(`INSERT INTO suppliers(name) VALUES ('Fixture supplier'); INSERT INTO customers(name) VALUES ('Fixture customer');
     INSERT INTO brands(name) VALUES ('Fixture brand');
-    INSERT INTO products(sku,model,size,minimum_stock,brand_id) VALUES ('A','Touring','R15',8,1),('B','Cargo','R20',1,1),('C','Unknown cost','R16',1,1),('D','Empty','R14',0,1);
+    INSERT INTO products(sku,model,size,minimum_stock,brand_id) VALUES ('A','Touring','R15',18,1),('B','Cargo','R20',1,1),('C','Unknown cost','R16',1,1),('D','Empty','R14',0,1);
     INSERT INTO products(sku,model,size,active) VALUES ('INACTIVE','Inactive stock','R14',0);`);
   const purchases = createPurchaseService(db),
     sales = createSaleService(db);
@@ -23,7 +23,7 @@ function seedDashboard(db) {
   });
   // Opening/adjustment cost must not be mistaken for a known sale cost without a purchase.
   db.prepare(
-    "INSERT INTO stock_movements(product_id,movement_type,quantity_change,unit_cost,created_at) VALUES (3,'ADJUSTMENT_IN',2,0,?)",
+    "INSERT INTO stock_movements(product_id,movement_type,quantity_change,unit_cost,created_at) VALUES (3,'ADJUSTMENT_IN',3,0,?)",
   ).run(localTime("2026-09-01"));
   // Fixture-only timestamps are supplied on insert; the ledger remains append-only.
   db.prepare(

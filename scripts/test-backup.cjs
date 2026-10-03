@@ -89,10 +89,10 @@ app.whenReady().then(async () => {
         },
       },
     });
-    assert.equal(service.getInfo().schemaVersion, 5);
+    assert.equal(service.getInfo().schemaVersion, 6);
     assert.equal((await service.create()).canceled, false);
     assert.deepEqual(allData(db), expected);
-    assert.equal(inspectFile(selected), 5);
+    assert.equal(inspectFile(selected), 6);
     let backup = new Database(selected, { readonly: true });
     assert.deepEqual(allData(backup), expected);
     backup.close();
@@ -212,7 +212,7 @@ app.whenReady().then(async () => {
         if (kind === "corrupt") fs.truncateSync(selected, 300);
         else {
           const file = new Database(selected);
-          if (kind === "newer") file.pragma("user_version=6");
+          if (kind === "newer") file.pragma("user_version=7");
           if (kind === "foreign-key") {
             file.pragma("foreign_keys=OFF");
             file.exec("UPDATE products SET brand_id=999");
@@ -249,7 +249,7 @@ app.whenReady().then(async () => {
     const migrationFiles = fs
       .readdirSync(path.join(__dirname, "../electron/database/migrations"))
       .sort();
-    for (const version of [1, 2, 3, 4]) {
+    for (const version of [1, 2, 3, 4, 5]) {
       selected = path.join(root, `old-${version}.sqlite3`);
       const old = new Database(selected);
       for (const file of migrationFiles.slice(0, version))
@@ -263,7 +263,7 @@ app.whenReady().then(async () => {
       old.exec("INSERT INTO settings(key,value) VALUES('old','preserved')");
       old.close();
       await service.restore();
-      assert.equal(db.pragma("user_version", { simple: true }), 5);
+      assert.equal(db.pragma("user_version", { simple: true }), 6);
       assert.equal(
         db.prepare("SELECT value FROM settings WHERE key='old'").get().value,
         "preserved",
@@ -326,7 +326,7 @@ app.whenReady().then(async () => {
     }
     assert.equal(service.getInfo().status, "Healthy");
     console.log(
-      "PASS Backup backend: integrity/schema, unchanged live WAL data, safety backups, cancellations, concurrency/business lock, protected paths/hardlinks, invalid/corrupt/unrelated/newer/FK/trigger rejection, migrations 1–4 → 5, migration/replacement/reopen failures, interrupted replacement and stale sidecar recovery, IPC guards.",
+      "PASS Backup backend: integrity/schema, unchanged live WAL data, safety backups, cancellations, concurrency/business lock, protected paths/hardlinks, invalid/corrupt/unrelated/newer/FK/trigger rejection, migrations 1–5 → 6, migration/replacement/reopen failures, interrupted replacement and stale sidecar recovery, IPC guards.",
     );
   } catch (error) {
     code = 1;

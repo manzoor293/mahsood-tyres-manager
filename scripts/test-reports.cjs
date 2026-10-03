@@ -282,7 +282,7 @@ app.whenReady().then(() => {
     }
     unregister();
     assert.equal(handlers.size, 0);
-    assert.equal(db.pragma("user_version", { simple: true }), 5);
+    assert.equal(db.pragma("user_version", { simple: true }), 6);
     assert.deepEqual(db.pragma("foreign_key_check"), []);
     db.close();
     db = openDatabase(filename, { readonly: true });

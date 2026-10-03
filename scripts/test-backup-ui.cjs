@@ -101,7 +101,7 @@ app.on("browser-window-created", (_, window) => {
       await evaluate('location.hash="/settings"');
       await text("Loading database information...");
       await text("Database Status: Healthy");
-      await text("Schema Version: 5");
+      await text("Schema Version: 6");
       await text("No recovery backups yet.");
       await text("No backup created this session.");
       const keys = await evaluate("Object.keys(window.api.backup).sort()");
@@ -162,10 +162,10 @@ app.on("browser-window-created", (_, window) => {
       selected = path.join(root, "newer.sqlite3");
       fs.copyFileSync(path.join(root, "ui-backup.sqlite3"), selected);
       const newer = new Database(selected);
-      newer.pragma("user_version=6");
+      newer.pragma("user_version=7");
       newer.close();
       await beginRestore();
-      await text("This backup uses schema 6.");
+      await text("This backup uses schema 7.");
       assert.deepEqual(allData(initializeDatabase(app)), expected);
       selected = path.join(root, "ui-backup.sqlite3");
       initializeDatabase(app).exec(

@@ -1,3 +1,4 @@
+import { pairPrice, stockLabel } from '../../utils/units.js';
 import StatusBadge from "../StatusBadge.jsx";
 import {
   Button,
@@ -41,7 +42,7 @@ export default function ProductTable({
               "Category",
               "Pattern",
               "Tyre Type",
-              "Selling Price",
+              "Selling Price / Pair",
               "Current Stock",
               "Minimum Stock",
               "Status",
@@ -50,7 +51,7 @@ export default function ProductTable({
               <TableCell
                 key={label}
                 align={
-                  ["Selling Price", "Current Stock", "Minimum Stock"].includes(
+                  ["Selling Price / Pair", "Current Stock", "Minimum Stock"].includes(
                     label,
                   )
                     ? "right"
@@ -96,7 +97,7 @@ export default function ProductTable({
                   fontVariantNumeric: "tabular-nums",
                 }}
               >
-                {formatPrice(product.default_selling_price)}
+                {pairPrice(product) === null ? "Unavailable" : formatPrice(pairPrice(product))}
               </TableCell>
               <TableCell
                 align="right"
@@ -108,9 +109,9 @@ export default function ProductTable({
                   fontWeight: 600,
                 }}
               >
-                {product.stock_quantity ?? "—"}
+                {stockLabel(product.stock_quantity)}
               </TableCell>
-              <TableCell align="right">{product.minimum_stock}</TableCell>
+              <TableCell align="right">{stockLabel(product.minimum_stock)}</TableCell>
               <TableCell>
                 <StatusBadge
                   size="small"

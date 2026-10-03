@@ -21,14 +21,15 @@ function createSaleRepository(db) {
     AND (@payment_status='all' OR payment_status=@payment_status)
     ORDER BY sold_at DESC,id DESC LIMIT @limit OFFSET @offset`);
   const product = db.prepare(`SELECT p.id,p.sku,p.active,i.quantity,
-    COALESCE((SELECT unit_cost FROM purchase_items WHERE product_id=p.id ORDER BY id DESC LIMIT 1),0) AS unit_cost
+    COALESCE((SELECT unit_cost FROM purchase_items WHERE product_id=p.id ORDER BY id DESC LIMIT 1),0) AS unit_cost,
+    COALESCE((SELECT units_per_transaction_unit FROM purchase_items WHERE product_id=p.id ORDER BY id DESC LIMIT 1),1) AS cost_units_per_unit
     FROM products p LEFT JOIN inventory i ON i.product_id=p.id WHERE p.id=?`);
   const invoice = db.prepare("SELECT id FROM sales WHERE invoice_number=?");
   const insert =
     db.prepare(`INSERT INTO sales(invoice_number,customer_id,subtotal,discount,total,sold_at,notes)
     VALUES (@invoice_number,@customer_id,@subtotal,@discount,@total,@sold_at,@notes)`);
   const insertItem = db.prepare(
-    "INSERT INTO sale_items(sale_id,product_id,quantity,unit_price,unit_cost) VALUES (?,?,?,?,?)",
+    "INSERT INTO sale_items(sale_id,product_id,quantity,unit_price,unit_cost,units_per_transaction_unit) VALUES (?,?,?,?,?,?)",
   );
   const movement =
     db.prepare(`INSERT INTO stock_movements(product_id,movement_type,quantity_change,sale_item_id,unit_cost)
@@ -65,9 +66,10 @@ function createSaleRepository(db) {
         item.quantity,
         item.unit_price,
         item.unit_cost,
+        item.units_per_transaction_unit,
       ).lastInsertRowid;
       // The existing trigger applies the negative movement to inventory.
-      movement.run(item.product_id, -item.quantity, id, item.unit_cost);
+      movement.run(item.product_id, -item.physical_quantity, id, item.unit_cost);
     },
     pay: (saleId, data) =>
       db

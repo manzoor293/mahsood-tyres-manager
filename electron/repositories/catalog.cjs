@@ -72,15 +72,16 @@ const productFields = [
 ];
 
 function createProductRepository(database) {
+  const storedFields = [...productFields, 'price_units_per_unit'];
   const select = `SELECT p.*, b.name AS brand_name, c.name AS category_name, i.quantity AS stock_quantity
     FROM products p LEFT JOIN brands b ON b.id = p.brand_id
     LEFT JOIN categories c ON c.id = p.category_id LEFT JOIN inventory i ON i.product_id = p.id`;
   const get = database.prepare(`${select} WHERE p.id = ?`);
   const insert =
-    database.prepare(`INSERT INTO products (${productFields.join(",")}, updated_at)
-    VALUES (${productFields.map((field) => `@${field}`).join(",")}, @updated_at)`);
+    database.prepare(`INSERT INTO products (${storedFields.join(",")}, updated_at)
+    VALUES (${storedFields.map((field) => `@${field}`).join(",")}, @updated_at)`);
   const update = database.prepare(
-    `UPDATE products SET ${productFields.map((field) => `${field} = @${field}`).join(",")}, updated_at = @updated_at WHERE id = @id`,
+    `UPDATE products SET ${storedFields.map((field) => `${field} = @${field}`).join(",")}, updated_at = @updated_at WHERE id = @id`,
   );
   const activate = database.prepare(
     "UPDATE products SET active = 1, updated_at = ? WHERE id = ?",

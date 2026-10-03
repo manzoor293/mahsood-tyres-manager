@@ -64,7 +64,7 @@ app.on("browser-window-created", (_, window) => {
     const noDialog = `!document.querySelector('[role="dialog"]')`;
     try {
       db.exec(`INSERT INTO suppliers(name) VALUES ('Supplier'); INSERT INTO customers(name,phone) VALUES ('UI Customer','03001234567'); INSERT INTO customers(name,active) VALUES ('Inactive customer',0);
-        INSERT INTO products(sku,model,size,default_selling_price) VALUES ('UI-A','Touring','R15',15000),('UI-B','Cargo','R20',25000);
+        INSERT INTO products(sku,model,size,default_selling_price,price_units_per_unit) VALUES ('UI-A','Touring','R15',15000,2),('UI-B','Cargo','R20',25000,2);
         INSERT INTO products(sku,model,size,active) VALUES ('HIDDEN','Inactive','R15',0);`);
       createPurchaseService(db).create({
         supplier_id: 1,
@@ -136,18 +136,18 @@ app.on("browser-window-created", (_, window) => {
       createInventoryService(db).adjust({
         product_id: 2,
         movement_type: "ADJUSTMENT_OUT",
-        quantity: 8,
+        quantity: 18,
         notes: "Concurrent stock change",
       });
       await click("Complete Sale");
       await wait(
-        `document.body.textContent.includes('Insufficient stock for UI-B. Only 2 available')`,
+        `document.body.textContent.includes('Insufficient stock for UI-B. Only 2 tyres available')`,
       );
       assert.equal(db.prepare("SELECT COUNT(*) AS n FROM sales").get().n, 0);
       createInventoryService(db).adjust({
         product_id: 2,
         movement_type: "ADJUSTMENT_IN",
-        quantity: 8,
+        quantity: 18,
         notes: "Restore temporary test stock",
       });
       // Delay the real guarded handler to verify the renderer cannot submit twice while waiting.
@@ -190,7 +190,7 @@ app.on("browser-window-created", (_, window) => {
           .prepare("SELECT quantity FROM inventory ORDER BY product_id")
           .all()
           .map((r) => r.quantity),
-        [8, 7, 0],
+        [16, 14, 0],
       );
       assert.equal(
         db

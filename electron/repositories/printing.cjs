@@ -40,7 +40,7 @@ function createPrintingRepository(db) {
       const c = kinds[kind],
         price = kind === "sale" ? "unit_price" : "unit_cost";
       // Customer-facing selection never includes internal sale cost.
-      return prepare(`SELECT i.id,p.sku,p.model,p.size,b.name AS brand,i.quantity,i.${price} AS unit_value,
+      return prepare(`SELECT i.id,p.sku,p.model,p.size,b.name AS brand,i.quantity,i.units_per_transaction_unit,i.${price} AS unit_value,
         i.quantity*i.${price} AS line_total
         FROM ${c.items} i JOIN products p ON p.id=i.product_id LEFT JOIN brands b ON b.id=p.brand_id
         WHERE i.${kind}_id=? ORDER BY i.id`).all(id);
@@ -63,7 +63,7 @@ function createPrintingRepository(db) {
         `SELECT id,reference,${kind}_id AS invoice_id,returned_at AS date,notes,total FROM ${kind}_returns WHERE id=?`,
       ).get(id),
     returnItems(kind, id) {
-      return prepare(`SELECT r.id,p.sku,p.model,p.size,b.name AS brand,r.quantity,r.unit_price AS unit_value,
+      return prepare(`SELECT r.id,p.sku,p.model,p.size,b.name AS brand,r.quantity,i.units_per_transaction_unit,r.unit_price AS unit_value,
         r.gross_value,r.return_value AS line_total
         FROM ${kind}_return_items r JOIN ${kind}_items i ON i.id=r.${kind}_item_id
         JOIN products p ON p.id=i.product_id LEFT JOIN brands b ON b.id=p.brand_id WHERE r.return_id=? ORDER BY r.id`).all(

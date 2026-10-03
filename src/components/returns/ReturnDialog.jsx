@@ -1,3 +1,4 @@
+import { quantityLabel, unitName, stockLabel, parseWholeQuantity } from '../../utils/units.js';
 import { useEffect, useRef, useState } from "react";
 import {
   Alert,
@@ -77,7 +78,7 @@ export default function ReturnDialog({ kind, invoiceId, onClose, onSaved }) {
     if (
       !selected.length ||
       Object.values(quantities).some(
-        (q) => q !== "" && (!Number.isSafeInteger(Number(q)) || Number(q) < 0),
+        (q) => q !== "" && (parseWholeQuantity(q, 0) === null),
       )
     ) {
       setError("Choose a positive whole quantity to return.");
@@ -176,20 +177,21 @@ export default function ReturnDialog({ kind, invoiceId, onClose, onSaved }) {
                           <TableCell>
                             {item.sku} · {item.model} · {item.size}
                           </TableCell>
-                          <TableCell>{item.quantity}</TableCell>
-                          <TableCell>{item.returned_quantity}</TableCell>
-                          <TableCell>{item.returnable_quantity}</TableCell>
-                          {!sale && <TableCell>{item.current_stock}</TableCell>}
+                          <TableCell>{quantityLabel(item.quantity, item.units_per_transaction_unit)}</TableCell>
+                          <TableCell>{quantityLabel(item.returned_quantity, item.units_per_transaction_unit)}</TableCell>
+                          <TableCell>{quantityLabel(item.returnable_quantity, item.units_per_transaction_unit)}</TableCell>
+                          {!sale && <TableCell>{stockLabel(item.current_stock)}</TableCell>}
                           <TableCell>
                             {formatPrice(
                               sale ? item.unit_price : item.unit_cost,
-                            )}
+                            )} / {unitName(item.units_per_transaction_unit).toLowerCase()}
                           </TableCell>
                           <TableCell>
                             <TextField
                               size="small"
                               type="number"
                               name={`return-quantity-${item.id}`}
+                              label={`Return quantity (${unitName(item.units_per_transaction_unit)}s)`}
                               aria-label={`Return quantity ${item.sku}`}
                               value={quantities[item.id] ?? ""}
                               disabled={busy || !item.returnable_quantity}
@@ -255,7 +257,7 @@ export default function ReturnDialog({ kind, invoiceId, onClose, onSaved }) {
                 {confirmed && (
                   <Alert severity="warning" sx={{ mt: 2 }}>
                     Confirm this return of{" "}
-                    {selected.reduce((n, i) => n + i.return_quantity, 0)} units
+                    {stockLabel(selected.reduce((n, i) => n + i.return_quantity * i.units_per_transaction_unit, 0))}
                     for {formatPrice(total)}. This document cannot be edited or
                     deleted.
                   </Alert>

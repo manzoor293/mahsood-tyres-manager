@@ -271,7 +271,7 @@ app.whenReady().then(() => {
       "VALIDATION",
     );
     assert.deepEqual(db.pragma("foreign_key_check"), []);
-    assert.equal(db.pragma("user_version", { simple: true }), 5);
+    assert.equal(db.pragma("user_version", { simple: true }), 6);
     other.close();
     other = null;
     db.close();
