@@ -1,18 +1,19 @@
 const {createDocumentService}=require('./print-documents.cjs');
 const {renderDocument}=require('../printing/template.cjs');
 const {CatalogError}=require('./validation.cjs');
+const {paperFor}=require('../printing/paper.cjs');
 function createPrintingService(db,driver) {
   const documents=createDocumentService(db),busy=new Set();
   function preview(type,id) {
     const document=documents.getDocument(type,id);
-    return {title:document.title,reference:document.reference,filename:document.filename,html:renderDocument(document)};
+    return {title:document.title,reference:document.reference,filename:document.filename,paper:paperFor(type),html:renderDocument(document)};
   }
   async function output(action,type,id,owner) {
     if(busy.has(owner))throw new CatalogError('BUSY','A document output operation is already in progress.');
     busy.add(owner);
     try {
       const fresh=preview(type,id);
-      const result=action==='print'?await driver.print(fresh.html,owner):await driver.savePdf(fresh.html,fresh.filename,owner);
+      const result=action==='print'?await driver.print(fresh.html,owner,fresh.paper):await driver.savePdf(fresh.html,fresh.filename,owner,fresh.paper);
       return {...result,preview:fresh};
     }finally{busy.delete(owner);}
   }

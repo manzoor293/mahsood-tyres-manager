@@ -1,4 +1,5 @@
 const v = require('./validation.cjs');
+const { physicalQuantity, multiply } = require('./units.cjs');
 const { createPurchaseRepository } = require('../repositories/purchases.cjs');
 
 function date(value, field) {
@@ -50,8 +51,10 @@ function createPurchaseService(database) {
         const product = repository.product(result.product_id);
         if (!product?.active) v.invalid('Select existing active products only.');
         v.integer(product.quantity, 'Current inventory quantity');
-        v.integer(product.quantity + result.quantity, 'Resulting stock');
-        const lineTotal = v.integer(result.quantity * result.unit_cost, 'Line total', 1);
+        result.units_per_transaction_unit = 2;
+        result.physical_quantity = physicalQuantity(result.quantity);
+        v.integer(product.quantity + result.physical_quantity, 'Resulting stock');
+        const lineTotal = multiply(result.quantity, result.unit_cost, 'Line total');
         data.subtotal = v.integer(data.subtotal + lineTotal, 'Subtotal');
         return result;
       });

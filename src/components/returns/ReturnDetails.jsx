@@ -1,4 +1,5 @@
 import PrintActions from "../printing/PrintActions.jsx";
+import { quantityLabel, unitName } from '../../utils/units.js';
 import {
   Button,
   Dialog,
@@ -43,8 +44,8 @@ export default function ReturnDetails({ document: d, onClose }) {
                   <TableCell>
                     {i.sku} · {i.model}
                   </TableCell>
-                  <TableCell>{i.quantity}</TableCell>
-                  <TableCell>{formatPrice(i.unit_price)}</TableCell>
+                  <TableCell>{quantityLabel(i.quantity, i.units_per_transaction_unit)}</TableCell>
+                  <TableCell>{formatPrice(i.unit_price)} / {unitName(i.units_per_transaction_unit).toLowerCase()}</TableCell>
                   <TableCell>{formatPrice(i.gross_value)}</TableCell>
                   <TableCell>{formatPrice(i.return_value)}</TableCell>
                 </TableRow>

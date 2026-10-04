@@ -87,7 +87,7 @@ app.whenReady().then(() => {
         inventory.getProductStock(1).quantity,
         inventory.getProductStock(2).quantity,
       ],
-      [23, 17],
+      [46, 34],
     );
     const movements = db
       .prepare(
@@ -98,7 +98,7 @@ app.whenReady().then(() => {
     sale.items.forEach((item, i) => {
       assert.equal(movements[i].sale_item_id, item.id);
       assert.equal(movements[i].product_id, item.product_id);
-      assert.equal(movements[i].quantity_change, -item.quantity);
+      assert.equal(movements[i].quantity_change, -item.quantity * 2);
       assert.equal(movements[i].unit_cost, item.unit_cost);
     });
     assert.equal(sale.payments[0].sale_id, sale.id);
@@ -190,7 +190,7 @@ app.whenReady().then(() => {
     createInventoryService(otherDb).adjust({
       product_id: 2,
       movement_type: "ADJUSTMENT_OUT",
-      quantity: displayed - 2,
+      quantity: displayed - 4,
       notes: "Concurrent adjustment",
     });
     const staleBefore = snapshot();

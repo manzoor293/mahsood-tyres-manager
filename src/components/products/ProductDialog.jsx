@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { pairPrice, stockLabel, parseWholeQuantity } from '../../utils/units.js';
 import {
   Alert,
   Button,
@@ -39,16 +40,18 @@ export default function ProductDialog({
     size: product?.size || "",
     pattern: product?.pattern || "",
     tyre_type: product?.tyre_type || "",
-    price: product ? priceInput(product.default_selling_price) : "",
-    minimum_stock: String(product?.minimum_stock ?? 0),
+    price: product && pairPrice(product) !== null ? priceInput(pairPrice(product)) : "",
+    minimum_stock: product?.minimum_stock % 2 ? "" : String((product?.minimum_stock ?? 0) / 2),
     notes: product?.notes || "",
   }));
   const [errors, setErrors] = useState({});
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [editedUnits, setEditedUnits] = useState({ price: false, minimum_stock: false });
   const missingOptions =
     !brands.some((row) => row.active) || !categories.some((row) => row.active);
   const change = (field) => (event) => {
+    if (field === 'price' || field === 'minimum_stock') setEditedUnits(current => ({ ...current, [field]: true }));
     setValues((current) => ({ ...current, [field]: event.target.value }));
     setErrors((current) => ({ ...current, [field]: "" }));
     setError("");
@@ -66,11 +69,11 @@ export default function ProductDialog({
           `Select a ${field === "brand_id" ? "brand" : "category"}.`;
     }
     const price = parsePrice(values.price);
-    if (price === null)
+    if (price === null && (!product || editedUnits.price))
       nextErrors.price =
         "Enter a nonnegative rupee amount with up to 2 decimal places.";
-    const minimum = Number(values.minimum_stock);
-    if (!/^\d+$/.test(values.minimum_stock) || !Number.isSafeInteger(minimum))
+    const minimum = parseWholeQuantity(values.minimum_stock, 0);
+    if (minimum === null && (!product || editedUnits.minimum_stock))
       nextErrors.minimum_stock = "Enter a nonnegative whole number.";
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length) return;
@@ -84,9 +87,9 @@ export default function ProductDialog({
         pattern: values.pattern,
         tyre_type: values.tyre_type,
         notes: values.notes,
-        default_selling_price: price,
-        minimum_stock: minimum,
       };
+      if (!product || editedUnits.price) data.default_selling_price = price;
+      if (!product || editedUnits.minimum_stock) data.minimum_stock = minimum;
       for (const field of ["brand_id", "category_id"])
         if (values[field] !== "") data[field] = Number(values[field]);
       const api = catalogApi();
@@ -203,27 +206,29 @@ export default function ProductDialog({
               />
             ))}
             <TextField
-              label="Default Selling Price (Rs.)"
+              label="Selling Price / Pair (Rs.)"
               name="price"
-              required
+              required={!product || editedUnits.price}
               value={values.price}
               onChange={change("price")}
               disabled={saving}
               error={Boolean(errors.price)}
               helperText={
-                errors.price || "In rupees, for example 24500 or 24500.50"
+                errors.price || (product?.price_units_per_unit === 1 && !editedUnits.price
+                  ? "Equivalent pair price. The existing per-tyre price is preserved until you change this field."
+                  : "In rupees per pair, for example 24500 or 24500.50")
               }
               slotProps={{ htmlInput: { inputMode: "decimal" } }}
             />
             <TextField
-              label="Minimum Stock"
+              label="Minimum Stock (Pairs)"
               name="minimum_stock"
-              required
+              required={!product || editedUnits.minimum_stock}
               value={values.minimum_stock}
               onChange={change("minimum_stock")}
               disabled={saving}
               error={Boolean(errors.minimum_stock)}
-              helperText={errors.minimum_stock || "Whole tyres"}
+              helperText={errors.minimum_stock || (product?.minimum_stock % 2 && !editedUnits.minimum_stock ? `${stockLabel(product.minimum_stock)} (legacy threshold). Leave unchanged to preserve it.` : 'Whole pairs; 1 pair = 2 tyres')}
               slotProps={{ htmlInput: { inputMode: "numeric" } }}
             />
             <TextField

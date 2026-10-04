@@ -169,6 +169,7 @@ export default function AuthPage({ setup, onAuthenticated }) {
           />
           {setup && (
             <TextField
+              className="mb-3!"
               fullWidth
               required
               label="Confirm Password"

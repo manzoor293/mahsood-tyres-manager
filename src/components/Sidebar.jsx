@@ -17,7 +17,9 @@ export default function Sidebar() {
             className="h-24 w-full object-contain"
           />
         </div>
-        <p className="mt-3 text-lg font-semibold text-white">Mahsood Tyres</p>
+        <p className="mt-3 text-lg font-semibold text-white uppercase">
+          Mahsood Tyres
+        </p>
       </div>
       <nav
         aria-label="Main navigation"

@@ -135,7 +135,7 @@ app.on("browser-window-created", (_, window) => {
           .prepare("SELECT quantity FROM inventory ORDER BY product_id")
           .all()
           .map((r) => r.quantity),
-        [2, 3, 0],
+        [4, 6, 0],
       );
       assert.equal(
         db.prepare("SELECT COUNT(*) AS n FROM stock_movements").get().n,

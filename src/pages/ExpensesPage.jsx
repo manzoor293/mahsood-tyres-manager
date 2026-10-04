@@ -233,8 +233,6 @@ export default function ExpensesPage() {
               aria-label="Expenses"
               sx={{
                 minWidth: 800,
-                "& thead th": { bgcolor: "#f8fafc", fontWeight: 600 },
-                "& td": { py: 1.5 },
               }}
             >
               <TableHead>

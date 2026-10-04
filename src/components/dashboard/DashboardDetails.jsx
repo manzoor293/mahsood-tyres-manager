@@ -1,3 +1,4 @@
+import { stockLabel } from '../../utils/units.js';
 import StatusBadge from "../StatusBadge.jsx";
 import {
   Button,
@@ -28,7 +29,7 @@ export function TopProducts({ rows }) {
   return (
     <Panel
       title="Top Selling Products"
-      note="Top 5 by units sold · item revenue before invoice discounts. Product descriptions reflect the current catalog."
+      note="Top 5 by physical tyres sold · item revenue before invoice discounts. Product descriptions reflect the current catalog."
     >
       {!rows.length ? (
         <p className="py-6 text-sm text-slate-500">
@@ -53,7 +54,7 @@ export function TopProducts({ rows }) {
               </div>
               <div>
                 <p className="text-sm font-semibold">
-                  {row.quantitySold} units
+                  {stockLabel(row.quantitySold)}
                 </p>
                 <p className="mt-1 text-xs text-slate-500">
                   {formatPrice(row.itemRevenue)}
@@ -108,7 +109,7 @@ export function StockAlerts({ rows, total }) {
                   </TableCell>
                   <TableCell>{row.size}</TableCell>
                   <TableCell>
-                    {row.quantity} / {row.minimum_stock}
+                    {stockLabel(row.quantity)} / {stockLabel(row.minimum_stock)}
                   </TableCell>
                   <TableCell>
                     <StatusBadge
@@ -163,7 +164,7 @@ export function RecentActivity({ rows }) {
               </div>
               <span className="text-sm font-medium">
                 {row.amount === null
-                  ? `${row.quantity > 0 ? "+" : ""}${row.quantity} units`
+                  ? `${row.quantity > 0 ? "+" : ""}${row.quantity} tyres`
                   : formatPrice(row.amount)}
               </span>
             </li>

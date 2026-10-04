@@ -218,7 +218,7 @@ export default function ProductsPage() {
           </TextField>
         </div>
         <div className="flex items-center justify-between border-t border-slate-100 px-5 py-2 text-xs text-slate-500">
-          <span>Prices in PKR · Stock shown in units</span>
+          <span>Prices in PKR per pair · 1 pair = 2 tyres</span>
           <Button size="small" onClick={reset}>
             Reset filters
           </Button>

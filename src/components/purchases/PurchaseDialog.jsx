@@ -1,3 +1,4 @@
+import { parseWholeQuantity } from '../../utils/units.js';
 import { useEffect, useRef, useState } from "react";
 import {
   Alert,
@@ -126,7 +127,7 @@ export default function PurchaseDialog({ suppliers, onClose, onSaved }) {
       items.some(
         (item) =>
           !item.product ||
-          !Number.isSafeInteger(Number(item.quantity)) ||
+          parseWholeQuantity(item.quantity) === null ||
           Number(item.quantity) <= 0 ||
           !(parsePrice(item.cost) > 0),
       )
@@ -247,7 +248,7 @@ export default function PurchaseDialog({ suppliers, onClose, onSaved }) {
                 />
                 <TextField
                   sx={{ width: 110 }}
-                  label="Quantity"
+                  label="Quantity (Pairs)"
                   name={`quantity-${index}`}
                   value={item.quantity}
                   onChange={(e) =>
@@ -256,7 +257,7 @@ export default function PurchaseDialog({ suppliers, onClose, onSaved }) {
                 />
                 <TextField
                   sx={{ width: 150 }}
-                  label="Unit cost (Rs.)"
+                  label="Purchase Price / Pair (Rs.)"
                   name={`cost-${index}`}
                   value={item.cost}
                   onChange={(e) => change(item.key, { cost: e.target.value })}

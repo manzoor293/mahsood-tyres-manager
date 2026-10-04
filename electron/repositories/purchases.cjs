@@ -52,16 +52,16 @@ function createPurchaseRepository(db) {
     insertItem(purchaseId, item) {
       const result = db
         .prepare(
-          "INSERT INTO purchase_items(purchase_id,product_id,quantity,unit_cost) VALUES (?,?,?,?)",
+          "INSERT INTO purchase_items(purchase_id,product_id,quantity,unit_cost,units_per_transaction_unit) VALUES (?,?,?,?,?)",
         )
-        .run(purchaseId, item.product_id, item.quantity, item.unit_cost);
+        .run(purchaseId, item.product_id, item.quantity, item.unit_cost, item.units_per_transaction_unit);
       // The ledger trigger is the only writer of current inventory quantity.
       db.prepare(
         `INSERT INTO stock_movements(product_id,movement_type,quantity_change,purchase_item_id,unit_cost)
         VALUES (?,'PURCHASE',?,?,?)`,
       ).run(
         item.product_id,
-        item.quantity,
+        item.physical_quantity,
         result.lastInsertRowid,
         item.unit_cost,
       );

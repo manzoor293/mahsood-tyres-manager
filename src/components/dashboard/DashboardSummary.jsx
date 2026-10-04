@@ -1,3 +1,4 @@
+import { stockLabel } from '../../utils/units.js';
 import { Paper } from "@mui/material";
 import { formatPrice } from "../../utils/catalog.js";
 
@@ -51,8 +52,8 @@ export default function DashboardSummary({ summary: s }) {
       "Current supplier credits; no refund received",
     ],
     [
-      "Stock Units",
-      s.stockUnits.toLocaleString(),
+      "Stock",
+      stockLabel(s.stockUnits),
       `Current · ${s.activeProducts} active products`,
     ],
     [

@@ -1,3 +1,4 @@
+import { quantityLabel, unitName } from '../../utils/units.js';
 import PrintActions from "../printing/PrintActions.jsx";
 import {
   Alert,
@@ -63,9 +64,9 @@ export default function SaleDetails({ sale, onClose }) {
                   <TableCell>
                     {item.sku} · {item.model} · {item.size}
                   </TableCell>
-                  <TableCell>{item.quantity}</TableCell>
-                  <TableCell>{formatPrice(item.unit_price)}</TableCell>
-                  <TableCell>{formatPrice(item.unit_cost)}</TableCell>
+                  <TableCell>{quantityLabel(item.quantity, item.units_per_transaction_unit)}</TableCell>
+                  <TableCell>{formatPrice(item.unit_price)} / {unitName(item.units_per_transaction_unit).toLowerCase()}</TableCell>
+                  <TableCell>{formatPrice(item.unit_cost)} / {unitName(item.units_per_transaction_unit).toLowerCase()}</TableCell>
                   <TableCell>{formatPrice(item.line_total)}</TableCell>
                 </TableRow>
               ))}

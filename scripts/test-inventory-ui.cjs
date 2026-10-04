@@ -41,7 +41,7 @@ app.on("browser-window-created", (_, window) => {
         Object.getOwnPropertyDescriptor(p,'value').set.call(e,${JSON.stringify(String(value))}); e.dispatchEvent(new Event(e.tagName==='SELECT'?'change':'input',{bubbles:true})); })()`);
     };
     const ready = `!document.querySelector('section').textContent.includes('Loading inventory...')`;
-    const qty = `document.querySelector('[data-stock-id="1"] [data-stock-quantity]')?.textContent`;
+    const qty = `document.querySelector('[data-stock-id="1"] [data-stock-quantity]')?.getAttribute('data-physical-quantity')`;
     const noDialog = `!document.querySelector('[role="dialog"]')`;
     const restore = () => {
       for (const method of [
@@ -74,7 +74,7 @@ app.on("browser-window-created", (_, window) => {
         supplier_id: 1,
         invoice_number: "UI-STOCK-INVOICE",
         purchased_at: "2026-09-25",
-        items: [{ product_id: 1, quantity: 12, unit_cost: 10000 }],
+        items: [{ product_id: 1, quantity: 6, unit_cost: 10000 }],
       });
       await click("Refresh");
       await wait(`${qty}==='12'`);
@@ -129,13 +129,13 @@ app.on("browser-window-created", (_, window) => {
         await evaluate(
           `document.querySelector('[data-current-quantity]').textContent`,
         ),
-        "12",
+        "6 pairs (12 tyres)",
       );
       assert.equal(
         await evaluate(
           `document.querySelector('[data-expected-quantity]').textContent`,
         ),
-        "15",
+        "7 pairs + 1 tyre (15 tyres)",
       );
       assert.equal(service.getProductStock(1).quantity, 12);
       await click("Cancel");
@@ -171,7 +171,7 @@ app.on("browser-window-created", (_, window) => {
       await click("Review Adjustment");
       await click("Confirm Adjustment");
       await wait(
-        `document.querySelector('[role="alert"]')?.textContent.includes('Insufficient stock. Only 13 units are available.')`,
+        `document.querySelector('[role="alert"]')?.textContent.includes('Insufficient stock. Only 13 tyres are available.')`,
       );
       assert.equal(service.getProductStock(1).quantity, 13);
       assert.equal(service.listMovements().length, 3);

@@ -87,7 +87,7 @@ app.on("browser-window-created", (_, window) => {
       assert.ok(await evaluate(metric("Gross Profit", "Rs. 18.98")));
       assert.ok(await evaluate(metric("Customer Receivables", "Rs. 44")));
       assert.ok(await evaluate(metric("Supplier Payables", "Rs. 150")));
-      assert.ok(await evaluate(metric("Stock Units", "13")));
+      assert.ok(await evaluate(metric("Stock", "13 pairs (26 tyres)")));
       assert.equal(
         await evaluate(
           `document.querySelectorAll('[data-top-product]').length`,

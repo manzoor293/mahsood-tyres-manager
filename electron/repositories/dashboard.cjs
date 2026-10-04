@@ -46,7 +46,7 @@ function createDashboardRepository(db) {
     SUM(${effectiveTotal("sale", "sales.id", "total")}) AS revenue,COUNT(*) AS count FROM sales WHERE ${within("sold_at")} GROUP BY bucket ORDER BY bucket`);
   const top =
     one(`SELECT p.id AS product_id,p.sku,p.model,p.size,b.name AS brand_name,
-    SUM(i.quantity-${returnedQuantity("sale", "i.id")}) AS quantitySold,SUM((i.quantity-${returnedQuantity("sale", "i.id")})*i.unit_price) AS itemRevenue
+    SUM((i.quantity-${returnedQuantity("sale", "i.id")})*i.units_per_transaction_unit) AS quantitySold,SUM((i.quantity-${returnedQuantity("sale", "i.id")})*i.unit_price) AS itemRevenue
     FROM sales s JOIN sale_items i ON i.sale_id=s.id JOIN products p ON p.id=i.product_id
     LEFT JOIN brands b ON b.id=p.brand_id WHERE ${within("s.sold_at")}
     GROUP BY p.id ORDER BY quantitySold DESC,itemRevenue DESC,p.id LIMIT 5`);

@@ -55,7 +55,7 @@ app.whenReady().then(() => {
       historicalCost: 4002,
       unknownCostItemCount: 0,
       activeProducts: 4,
-      stockUnits: 13,
+      stockUnits: 26,
       lowStockCount: 2,
       outOfStockCount: 1,
       grossProfit: 1898,
@@ -71,8 +71,8 @@ app.whenReady().then(() => {
     assert.deepEqual(
       result.topProducts.map((p) => [p.sku, p.quantitySold, p.itemRevenue]),
       [
-        ["A", 2, 3002],
-        ["B", 1, 3000],
+        ["A", 4, 3002],
+        ["B", 2, 3000],
       ],
     );
     assert.equal(result.topProducts[0].brand_name, "Fixture brand");
@@ -245,7 +245,7 @@ app.whenReady().then(() => {
       "VALIDATION",
     );
     assert.equal(handler({ trusted: true }, filters).ok, true);
-    assert.equal(db.pragma("user_version", { simple: true }), 5);
+    assert.equal(db.pragma("user_version", { simple: true }), 6);
     assert.deepEqual(db.pragma("foreign_key_check"), []);
     db.close();
     db = openDatabase(filename, { readonly: true });

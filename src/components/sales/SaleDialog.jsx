@@ -1,3 +1,4 @@
+import { pairPrice, stockLabel, parseWholeQuantity } from '../../utils/units.js';
 import { useRef, useState } from "react";
 import {
   Alert,
@@ -55,7 +56,7 @@ export default function SaleDialog({ onClose, onSaved }) {
             {
               product,
               quantity: "1",
-              price: priceInput(product.default_selling_price),
+              price: pairPrice(product) === null ? "" : priceInput(pairPrice(product)),
             },
           ];
     });
@@ -77,7 +78,7 @@ export default function SaleDialog({ onClose, onSaved }) {
     if (
       items.some(
         (row) =>
-          !Number.isSafeInteger(Number(row.quantity)) ||
+          parseWholeQuantity(row.quantity) === null ||
           Number(row.quantity) <= 0 ||
           parsePrice(row.price) === null,
       )
@@ -178,7 +179,7 @@ export default function SaleDialog({ onClose, onSaved }) {
                     </strong>
                     <p className="text-sm text-slate-500">
                       {row.product.size} · Available:{" "}
-                      {row.product.stock_quantity}
+                      {stockLabel(row.product.stock_quantity)}
                     </p>
                   </div>
                   <Button
@@ -197,7 +198,7 @@ export default function SaleDialog({ onClose, onSaved }) {
                   <TextField
                     size="small"
                     sx={{ width: 110 }}
-                    label="Quantity"
+                    label="Quantity (Pairs)"
                     name={`sale-quantity-${index}`}
                     value={row.quantity}
                     disabled={busy}
@@ -208,7 +209,7 @@ export default function SaleDialog({ onClose, onSaved }) {
                   <TextField
                     size="small"
                     sx={{ width: 155 }}
-                    label="Unit price (Rs.)"
+                    label="Selling Price / Pair (Rs.)"
                     name={`sale-price-${index}`}
                     value={row.price}
                     disabled={busy}

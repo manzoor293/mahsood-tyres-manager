@@ -9,7 +9,7 @@ import {
 } from "@mui/material";
 import { catalogRequest } from "../../utils/catalog.js";
 
-export default function PrintPreview({ type, documentId, onClose }) {
+export default function PrintPreview({ type, documentId, onClose, ledgerFilters }) {
   const [preview, setPreview] = useState(null),
     [busy, setBusy] = useState(false),
     [loading, setLoading] = useState(true);
@@ -22,7 +22,7 @@ export default function PrintPreview({ type, documentId, onClose }) {
     setLoading(true);
     setError("");
     setPreview(null);
-    catalogRequest(() => window.api.printing.preview(type, documentId))
+    catalogRequest(() => ledgerFilters ? window.api.ledger.preview(ledgerFilters) : window.api.printing.preview(type, documentId))
       .then((data) => {
         if (live) setPreview(data);
       })
@@ -35,7 +35,7 @@ export default function PrintPreview({ type, documentId, onClose }) {
     return () => {
       live = false;
     };
-  }, [type, documentId, revision]);
+  }, [type, documentId, ledgerFilters, revision]);
   async function output(method) {
     if (submitting.current || loading) return;
     submitting.current = true;
@@ -44,7 +44,7 @@ export default function PrintPreview({ type, documentId, onClose }) {
     setNotice("");
     try {
       const result = await catalogRequest(() =>
-        window.api.printing[method](type, documentId),
+        ledgerFilters ? window.api.ledger[method](ledgerFilters) : window.api.printing[method](type, documentId),
       );
       setPreview(result.preview);
       setNotice(
@@ -74,7 +74,7 @@ export default function PrintPreview({ type, documentId, onClose }) {
       </DialogTitle>
       <DialogContent dividers sx={{ minWidth: 0, p: { xs: 1, sm: 2 } }}>
         <p className="mb-3 text-sm text-slate-600">
-          A4 document. Each print or PDF export reloads the saved record. Use
+          {preview?.paper?.name || 'A4'} document. Each print or PDF export reloads the saved record. Use
           Refresh Preview to check the latest position.
         </p>
         {error && (

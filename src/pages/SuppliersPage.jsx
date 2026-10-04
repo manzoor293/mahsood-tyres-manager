@@ -214,8 +214,6 @@ export default function SuppliersPage() {
               aria-label="Suppliers"
               sx={{
                 minWidth: 750,
-                "& thead th": { bgcolor: "#f8fafc", fontWeight: 600 },
-                "& td": { py: 1.5 },
               }}
             >
               <TableHead>

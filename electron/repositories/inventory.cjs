@@ -1,5 +1,5 @@
 const stock = `SELECT p.id AS product_id,p.sku,p.model,p.size,p.brand_id,p.category_id,p.active,
-    p.minimum_stock,p.default_selling_price,b.name AS brand_name,c.name AS category_name,i.quantity,
+    p.minimum_stock,p.default_selling_price,p.price_units_per_unit,b.name AS brand_name,c.name AS category_name,i.quantity,
     CASE WHEN i.quantity=0 THEN 'out' WHEN i.quantity<=p.minimum_stock THEN 'low' ELSE 'in' END AS stock_status
     FROM inventory i JOIN products p ON p.id=i.product_id
     LEFT JOIN brands b ON b.id=p.brand_id LEFT JOIN categories c ON c.id=p.category_id`;
@@ -33,13 +33,19 @@ function createInventoryRepository(db) {
     db.prepare(`INSERT INTO stock_movements(product_id,movement_type,quantity_change,unit_cost,notes)
     VALUES (@product_id,@movement_type,@quantity_change,@unit_cost,@notes)`);
   const cost = db.prepare(
-    `SELECT unit_cost FROM purchase_items WHERE product_id=? ORDER BY id DESC LIMIT 1`,
+    `SELECT unit_cost,units_per_transaction_unit FROM purchase_items WHERE product_id=? ORDER BY id DESC LIMIT 1`,
   );
   return {
     list: (filters) => list.all(filters),
     get: (id) => get.get(id),
     listMovements: (filters) => movements.all(filters),
-    latestPurchaseCost: (id) => cost.get(id)?.unit_cost ?? 0,
+    // Adjustment costs are non-accounting per-tyre references. Do not round half-paise costs.
+    latestPurchaseCost: (id) => {
+      const row = cost.get(id);
+      if (!row) return 0;
+      return row.unit_cost % row.units_per_transaction_unit === 0
+        ? row.unit_cost / row.units_per_transaction_unit : 0;
+    },
     insert: (data) => insert.run(data).lastInsertRowid,
   };
 }

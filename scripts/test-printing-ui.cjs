@@ -126,6 +126,9 @@ app.on("browser-window-created", (_, window) => {
         /unit_cost|Historical unit cost|Gross profit|Rs\. 61\.23/i,
       );
       assert.match(html, /Mahsood Test Shop/);
+      assert.match(html, /SALES INVOICE/);
+      assert.match(html, /148mm 210mm/);
+      assert.ok(await evaluate("document.body.textContent.includes('A5 document.')"));
       assert.match(html, /Historical Brand/);
       assert.equal(
         await evaluate(
@@ -224,7 +227,7 @@ app.on("browser-window-created", (_, window) => {
       await click("View purchase PUR-RETURN");
       await click("Print Purchase");
       await preview();
-      assert.match(await previewHtml(), /Historical unit cost/);
+      assert.match(await previewHtml(), /Price \/ Tyre/);
       assert.match(await previewHtml(), /Rs\. 60\.00/);
       await closePreview();
       await click("Close");

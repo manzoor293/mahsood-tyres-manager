@@ -2,6 +2,7 @@ import { ThemeProvider, createTheme } from "@mui/material/styles";
 import { HashRouter } from "react-router-dom";
 import AppRoutes from "./routes/AppRoutes.jsx";
 import AuthBoundary from "./context/AuthContext.jsx";
+import { tableComponents } from "./utils/tableStyles.js";
 
 const theme = createTheme({
   palette: {
@@ -14,6 +15,7 @@ const theme = createTheme({
     button: { textTransform: "none" },
   },
   shape: { borderRadius: 12 },
+  components: tableComponents,
 });
 
 export default function App() {

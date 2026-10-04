@@ -1,4 +1,5 @@
 const v = require('./validation.cjs');
+const { multiply } = require('./units.cjs');
 const { createLookupRepository, createProductRepository, productFields } = require('../repositories/catalog.cjs');
 
 function createCatalogServices(database) {
@@ -55,6 +56,8 @@ function createCatalogServices(database) {
         else result[field] = v.id(value);
       } else if (['default_selling_price', 'minimum_stock'].includes(field)) {
         result[field] = v.integer(value === undefined && !current ? 0 : value, field);
+        if (field === 'minimum_stock' && (!current || Object.hasOwn(data, field)))
+          result[field] = multiply(result[field], 2, 'Minimum stock in tyres');
       } else result[field] = v.text(value, field, field === 'notes' ? 5000 : 200, true);
     }
     for (const [field, repository] of [['brand_id', brands], ['category_id', categories]]) {
@@ -62,6 +65,8 @@ function createCatalogServices(database) {
       const linked = required(repository, result[field]);
       if (!linked.active && (!current || current[field] !== result[field])) v.invalid(`${field} must reference an active record.`);
     }
+    result.price_units_per_unit = !current || Object.hasOwn(data, 'default_selling_price')
+      ? 2 : current.price_units_per_unit;
     return result;
   }
   return {

@@ -1,3 +1,4 @@
+import { stockLabel, parseWholeQuantity } from '../../utils/units.js';
 import { useRef, useState } from "react";
 import {
   Alert,
@@ -19,7 +20,7 @@ export default function AdjustmentDialog({ product, onClose, onSaved }) {
   const [busy, setBusy] = useState(false);
   const saving = useRef(false);
   const amount = Number(quantity);
-  const validAmount = Number.isSafeInteger(amount) && amount > 0;
+  const validAmount = parseWholeQuantity(quantity, 1, 1) !== null;
   const expected =
     product.quantity + (type === "ADJUSTMENT_IN" ? amount : -amount);
   function validate(event) {
@@ -90,9 +91,9 @@ export default function AdjustmentDialog({ product, onClose, onSaved }) {
             className="mb-5 grid grid-cols-2 gap-3 rounded-lg bg-slate-50 p-4"
             aria-live="polite"
           >
-            <span>Current quantity</span>
-            <strong data-current-quantity>{product.quantity}</strong>
-            <span>Adjustment quantity</span>
+            <span>Current stock</span>
+            <strong data-current-quantity>{stockLabel(product.quantity)}</strong>
+            <span>Adjustment quantity (Tyres)</span>
             <strong>
               {validAmount
                 ? `${type === "ADJUSTMENT_IN" ? "+" : "-"}${amount}`
@@ -100,7 +101,7 @@ export default function AdjustmentDialog({ product, onClose, onSaved }) {
             </strong>
             <span>Expected resulting quantity</span>
             <strong data-expected-quantity>
-              {validAmount ? expected : "—"}
+              {validAmount ? stockLabel(expected) : "—"}
             </strong>
           </div>
           {review ? (
@@ -126,7 +127,7 @@ export default function AdjustmentDialog({ product, onClose, onSaved }) {
                 <option value="ADJUSTMENT_OUT">Stock decrease</option>
               </TextField>
               <TextField
-                label="Quantity"
+                label="Adjustment Quantity (Tyres)"
                 name="adjustment-quantity"
                 value={quantity}
                 disabled={busy}

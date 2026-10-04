@@ -268,7 +268,7 @@ export default function InventoryPage() {
           onClose={() => setEditor(null)}
           onSaved={(stock) => {
             setEditor(null);
-            setNotice(`Stock updated. ${stock.sku}: ${stock.quantity} units.`);
+            setNotice(`Stock updated. ${stock.sku}: ${stock.quantity} physical tyres.`);
             list.refresh();
           }}
         />
