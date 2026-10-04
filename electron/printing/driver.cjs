@@ -2,6 +2,7 @@ const fs = require("node:fs/promises");
 const path = require("node:path");
 const { BrowserWindow, dialog } = require("electron");
 const { CatalogError } = require("../services/validation.cjs");
+const { standardPaper, electronPageSize } = require('./paper.cjs');
 
 // Native dependencies can be replaced only by main-process tests, never IPC callers.
 function createPrintDriver(overrides = {}) {
@@ -62,7 +63,7 @@ function createPrintDriver(overrides = {}) {
     }
   }
   return {
-    print(html, owner) {
+    print(html, owner, paper = standardPaper) {
       return withWindow(
         html,
         owner,
@@ -83,9 +84,10 @@ function createPrintDriver(overrides = {}) {
                 window,
                 {
                   silent: false,
-                  printBackground: false,
-                  color: false,
-                  pageSize: "A4",
+                  printBackground: paper.kind === 'invoice',
+                  color: paper.kind === 'invoice',
+                  pageSize: electronPageSize(paper),
+                  ...(paper.kind === 'invoice' ? { margins: { marginType: 'custom', top: paper.marginMm * 96 / 25.4, bottom: paper.marginMm * 96 / 25.4, left: paper.marginMm * 96 / 25.4, right: paper.marginMm * 96 / 25.4 } } : {}),
                 },
                 (success, reason) => {
                   if (success) finish({ status: "printed" });
@@ -107,7 +109,7 @@ function createPrintDriver(overrides = {}) {
           }),
       );
     },
-    async savePdf(html, filename, owner) {
+    async savePdf(html, filename, owner, paper = standardPaper) {
       let selected;
       try {
         selected = await dependencies.chooseFile(owner, {
@@ -134,9 +136,9 @@ function createPrintDriver(overrides = {}) {
         );
       return withWindow(html, owner, async (window) => {
         const bytes = await dependencies.toPdf(window, {
-          pageSize: "A4",
+          pageSize: electronPageSize(paper),
           preferCSSPageSize: true,
-          printBackground: false,
+          printBackground: paper.kind === 'invoice',
           displayHeaderFooter: false,
         });
         await dependencies.writeFile(destination, bytes);

@@ -1,5 +1,6 @@
 const fs = require("node:fs");
 const path = require("node:path");
+const { renderCompactInvoice } = require('./compact-invoice.cjs');
 const css = fs.readFileSync(path.join(__dirname, "document.css"), "utf8");
 const escapeHtml = (value) =>
   String(value ?? "").replace(
@@ -39,6 +40,8 @@ function renderDocument(document) {
   const itemTable = d.items.length
     ? `<table aria-label="Document items"><colgroup><col style="width:13%"><col style="width:25%"><col style="width:15%"><col style="width:8%"><col style="width:19%"><col style="width:20%"></colgroup><thead><tr>${["SKU", "Product / brand / model", "Tyre size", d.quantityLabel || "Qty", d.unitLabel, d.lineLabel].map((label) => `<th scope="col">${escapeHtml(label)}</th>`).join("")}</tr></thead><tbody>${d.items.map((item) => `<tr><td>${escapeHtml(item.sku)}</td><td>${escapeHtml([item.brand, item.model].filter(Boolean).join(" / "))}</td><td>${escapeHtml(item.size)}</td><td class="quantity">${escapeHtml(item.quantity)}${d.mixedUnits ? ` ${item.units_per_transaction_unit === 2 ? "pairs" : "tyres"}` : ""}</td><td class="money">${escapeHtml(money(item.unit_value))}</td><td class="money">${escapeHtml(money(item.line_total))}</td></tr>`).join("")}</tbody></table>`
     : "";
+  if (['saleInvoice', 'purchaseInvoice'].includes(d.type))
+    return renderCompactInvoice(d, { escapeHtml, money, date, paragraphs, itemTable });
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src 'none'; base-uri 'none'; form-action 'none'"><title>${escapeHtml(d.title)} - ${escapeHtml(d.reference)}</title><style>${css}</style></head><body><main class="document">
     <header><h1>${escapeHtml(shop.name)}</h1>${paragraphs([shop.address, shop.phone && `Phone: ${shop.phone}`, shop.alternatePhone && `Alternate phone: ${shop.alternatePhone}`, shop.email && `Email: ${shop.email}`, shop.ntn && `NTN / registration: ${shop.ntn}`])}</header>
     <h2>${escapeHtml(d.title)}</h2><div class="meta"><div>${paragraphs([`Reference: ${d.reference}`, `Date: ${date(d.date)}`, d.invoiceReference && d.invoiceReference !== d.reference && `Related invoice: ${d.invoiceReference}`])}</div><div><p class="label">${escapeHtml(d.contactLabel)}</p>${paragraphs([d.contact.name, d.contact.phone, d.contact.address])}</div></div>

@@ -74,7 +74,7 @@ export default function PrintPreview({ type, documentId, onClose, ledgerFilters 
       </DialogTitle>
       <DialogContent dividers sx={{ minWidth: 0, p: { xs: 1, sm: 2 } }}>
         <p className="mb-3 text-sm text-slate-600">
-          A4 document. Each print or PDF export reloads the saved record. Use
+          {preview?.paper?.name || 'A4'} document. Each print or PDF export reloads the saved record. Use
           Refresh Preview to check the latest position.
         </p>
         {error && (

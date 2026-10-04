@@ -126,6 +126,9 @@ app.on("browser-window-created", (_, window) => {
         /unit_cost|Historical unit cost|Gross profit|Rs\. 61\.23/i,
       );
       assert.match(html, /Mahsood Test Shop/);
+      assert.match(html, /SALES INVOICE/);
+      assert.match(html, /148mm 210mm/);
+      assert.ok(await evaluate("document.body.textContent.includes('A5 document.')"));
       assert.match(html, /Historical Brand/);
       assert.equal(
         await evaluate(

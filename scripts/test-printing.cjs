@@ -13,6 +13,7 @@ const { createPrintDriver } = require("../electron/printing/driver.cjs");
 const { registerPrintingIpc } = require("../electron/ipc/printing.cjs");
 const { renderDocument, money } = require("../electron/printing/template.cjs");
 const { seedPrinting } = require("./printing-fixtures.cjs");
+const { invoicePaper } = require('../electron/printing/paper.cjs');
 if (!process.env.MAHSOOD_UI_TEST_DATA)
   throw Error("Temporary profile required");
 app.setPath("userData", process.env.MAHSOOD_UI_TEST_DATA);
@@ -43,7 +44,7 @@ app.whenReady().then(async () => {
       assert.equal(document.shop.ntn, "TEST-NTN");
       const html = renderDocument(document);
       assert.ok(html.startsWith("<!doctype html>"));
-      assert.match(html, /@page\s*\{\s*size:\s*A4/);
+      assert.match(html, type.endsWith('Invoice') ? /@page\s*\{\s*size:\s*148mm 210mm/ : /@page\s*\{\s*size:\s*A4/);
       assert.ok(!html.includes("<script"));
     }
     const sale = service.getDocument("saleInvoice", 1);
@@ -70,6 +71,9 @@ app.whenReady().then(async () => {
     assert.equal(purchase.items[0].unit_value, 6000);
     assert.equal(purchase.contact.phone, "0300-1234567");
     assert.match(renderDocument(purchase), /Price \/ Tyre/);
+    assert.match(renderDocument(purchase), /Qty \(Tyres\)/);
+    assert.match(renderDocument(purchase), /Supplier credit due/);
+    assert.match(renderDocument(sale), /Customer credit \/ refund due/);
     const payment = service.getDocument("customerPayment", 4);
     assert.equal(payment.reference, "CP-000004");
     assert.equal(
@@ -138,7 +142,8 @@ app.whenReady().then(async () => {
     );
     const escaped = renderDocument(service.getDocument("saleInvoice", 1));
     assert.ok(escaped.includes("&lt;script&gt;"));
-    assert.ok(!escaped.includes("<img"));
+    assert.equal((escaped.match(/<img /g) || []).length, 1, 'Only the trusted embedded logo is an image');
+    assert.ok(!escaped.includes('<img src="https://'));
     db.exec("DELETE FROM settings WHERE key='shop.name'");
     assert.equal(
       service.getDocument("saleInvoice", 1).shop.name,
@@ -209,7 +214,10 @@ app.whenReady().then(async () => {
       print: (_window, options, callback) => {
         nativeCalls++;
         assert.equal(options.silent, false);
-        assert.equal(options.pageSize, "A4");
+        assert.equal(options.pageSize, "A5");
+        assert.equal(options.printBackground, true);
+        assert.equal(options.color, true);
+        assert.equal(options.margins.marginType, 'custom');
         callback(
           mode === "success",
           mode === "cancel" ? "Print job canceled" : "Print job failed",
@@ -226,23 +234,23 @@ app.whenReady().then(async () => {
       },
     });
     const html = output.preview("saleInvoice", 1).html;
-    assert.equal((await driver.print(html, owner)).status, "cancelled");
+    assert.equal((await driver.print(html, owner, invoicePaper)).status, "cancelled");
     mode = "fail";
     await assert.rejects(
-      () => driver.print(html, owner),
+      () => driver.print(html, owner, invoicePaper),
       (e) => e.code === "PRINT_FAILED",
     );
     mode = "success";
-    assert.equal((await driver.print(html, owner)).status, "printed");
+    assert.equal((await driver.print(html, owner, invoicePaper)).status, "printed");
     assert.equal(nativeCalls, 3);
     assert.equal(
-      (await driver.savePdf(html, "sale.pdf", owner)).status,
+      (await driver.savePdf(html, "sale.pdf", owner, invoicePaper)).status,
       "cancelled",
     );
     assert.equal(fs.existsSync(destination), false);
     saveMode = "save";
     assert.equal(
-      (await driver.savePdf(html, "sale.pdf", owner)).status,
+      (await driver.savePdf(html, "sale.pdf", owner, invoicePaper)).status,
       "saved",
     );
     assert.equal(
@@ -288,7 +296,7 @@ app.whenReady().then(async () => {
         }).savePdf(html, "sale.pdf", owner),
       (e) => e.code === "PRINT_FAILED",
     );
-    // Long descriptions and many persisted rows exercise real A4 pagination, not a template mock.
+    // Long descriptions and many persisted rows exercise real A5 pagination, not a template mock.
     db.exec(
       "INSERT INTO sales(id,invoice_number,subtotal,total,sold_at) VALUES(4,'SALE-MANY',8000,8000,'2026-09-26')",
     );
@@ -297,7 +305,7 @@ app.whenReady().then(async () => {
     );
     for (let index = 0; index < 80; index++) addItem.run();
     const many = output.preview("saleInvoice", 4);
-    await driver.savePdf(many.html, many.filename, owner);
+    await driver.savePdf(many.html, many.filename, owner, many.paper);
     const pdf = fs.readFileSync(destination).toString("latin1");
     assert.ok(
       (pdf.match(/\/Type\s*\/Page\b/g) || []).length > 1,
@@ -308,10 +316,11 @@ app.whenReady().then(async () => {
     );
     assert.ok(
       mediaBox &&
-        Math.abs(Number(mediaBox[1]) - 595.28) < 1 &&
-        Math.abs(Number(mediaBox[2]) - 841.89) < 1,
-      `PDF must use A4 dimensions: ${mediaBox?.[0]}`,
+        Math.abs(Number(mediaBox[1]) - 419.53) < 1 &&
+        Math.abs(Number(mediaBox[2]) - 595.28) < 1,
+      `PDF must use A5 dimensions: ${mediaBox?.[0]}`,
     );
+    await require('./compact-printing-checks.cjs').checkCompactPrinting(db, owner);
     const handlers = new Map();
     registerPrintingIpc(
       {

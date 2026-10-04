@@ -1,6 +1,8 @@
 const { createAuthService } = require("./services/auth.cjs");
 const { createLedgerService } = require("./services/ledger.cjs");
-const { createLedgerPrintingService } = require("./services/ledger-printing.cjs");
+const {
+  createLedgerPrintingService,
+} = require("./services/ledger-printing.cjs");
 const { registerLedgerIpc } = require("./ipc/ledger.cjs");
 const { createAuthorizedIpc, registerAuthIpc } = require("./ipc/auth.cjs");
 const { app, BrowserWindow, session, ipcMain, dialog } = require("electron");
@@ -44,7 +46,7 @@ const {
   getDatabasePath,
 } = require("./database/index.cjs");
 
-app.setName("Mahsood Tyre Manager");
+app.setName("Mahsood Tyres");
 const development = !app.isPackaged && process.argv.includes("--dev");
 const developmentPort = Number(process.env.MAHSOOD_DEV_PORT || 5173);
 if (
@@ -66,7 +68,7 @@ async function createWindow() {
     ? path.join(process.resourcesPath, "icon.ico")
     : path.join(app.getAppPath(), "build/icon.ico");
   const window = new BrowserWindow({
-    title: "Mahsood Tyre Manager",
+    title: "Mahsood Tyres",
     ...(existsSync(iconPath) ? { icon: iconPath } : {}),
     width: 1100,
     height: 760,
@@ -115,7 +117,12 @@ function fail(error) {
 }
 
 function bindBusinessIpc(database, ipcMain) {
-  registerLedgerIpc(ipcMain, createLedgerService(database), createLedgerPrintingService(database, createPrintDriver()), createSenderGuard(allowedContents, rendererUrl));
+  registerLedgerIpc(
+    ipcMain,
+    createLedgerService(database),
+    createLedgerPrintingService(database, createPrintDriver()),
+    createSenderGuard(allowedContents, rendererUrl),
+  );
   registerSettingsIpc(
     ipcMain,
     createSettingsService(database),
