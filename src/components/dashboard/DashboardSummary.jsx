@@ -1,4 +1,4 @@
-import { stockLabel } from '../../utils/units.js';
+import { stockLabel } from "../../utils/units.js";
 import { Paper } from "@mui/material";
 import { formatPrice } from "../../utils/catalog.js";
 

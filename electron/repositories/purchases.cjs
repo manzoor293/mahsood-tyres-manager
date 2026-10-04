@@ -9,10 +9,10 @@ function createPurchaseRepository(db) {
   const projection = withBalance(summary);
   const get = db.prepare(`${projection} WHERE id=?`);
   const items =
-    db.prepare(`SELECT i.*, p.sku, p.model, p.size, i.quantity*i.unit_cost AS line_total,
+    db.prepare(`SELECT i.*, p.sku, p.model, p.size, b.name AS brand_name, i.quantity*i.unit_cost AS line_total,
     i.quantity*i.unit_cost+i.allocated_shipment_cost AS landed_line_total,
     ${returnedQuantity('purchase', 'i.id')} AS returned_quantity
-    FROM purchase_items i JOIN products p ON p.id=i.product_id WHERE purchase_id=? ORDER BY i.id`);
+    FROM purchase_items i JOIN products p ON p.id=i.product_id LEFT JOIN brands b ON b.id=p.brand_id WHERE purchase_id=? ORDER BY i.id`);
   const payments = db.prepare(
     "SELECT * FROM supplier_payments WHERE purchase_id=? ORDER BY id",
   );

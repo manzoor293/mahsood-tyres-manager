@@ -125,7 +125,7 @@ app.on("browser-window-created", (_, window) => {
         html,
         /unit_cost|Historical unit cost|Gross profit|Rs\. 61\.23/i,
       );
-      assert.match(html, /Mahsood Test Shop/);
+      assert.match(html, /<h1\b[^>]*>Mahsood Tyres<\/h1>/);
       assert.match(html, /SALES INVOICE/);
       assert.match(html, /148mm 210mm/);
       assert.ok(await evaluate("document.body.textContent.includes('A5 document.')"));
