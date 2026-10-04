@@ -40,7 +40,7 @@ app
       const legacy = db.prepare("SELECT * FROM expenses").get();
       db.close();
       db = openDatabase(filename);
-      assert.equal(db.pragma("user_version", { simple: true }), 6);
+      assert.equal(db.pragma("user_version", { simple: true }), 7);
       assert.deepEqual(db.prepare("SELECT * FROM expenses").get(), legacy);
       assert.equal(
         db.prepare("SELECT active FROM expense_categories").get().active,

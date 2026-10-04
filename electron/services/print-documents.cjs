@@ -37,6 +37,12 @@ function createDocumentService(db,clock=()=>new Date()) {
       record=invoice;document.reference=invoice.invoice_number;
       document.items=safeNumbers(repository.invoiceItems(config.kind,id));
       document.totals=[['Subtotal',invoice.subtotal],['Discount',invoice.discount],['Original invoice total',invoice.total]];
+      if (!sale) {
+        document.totals=[['Subtotal',invoice.subtotal],['Discount',invoice.discount],['Supplier Invoice Total',invoice.total]];
+        if (invoice.shipment_cost || invoice.transporter_name || invoice.shipment_reference)
+          document.acquisition={shipment:invoice.shipment_cost,transporter:invoice.transporter_name,reference:invoice.shipment_reference,
+          landedTotal:safeNumbers(BigInt(invoice.total)+BigInt(invoice.shipment_cost))};
+      }
       document.sectionTitle='Original invoice';
       document.relatedReturns=safeNumbers(repository.references(config.kind,id));
     } else if(config.category==='payment') {

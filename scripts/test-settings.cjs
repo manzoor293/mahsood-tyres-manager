@@ -182,7 +182,7 @@ app.whenReady().then(async () => {
       handlers.get("settings:getShopProfile")({ trusted: true }).data,
       expected,
     );
-    assert.equal(db.pragma("user_version", { simple: true }), 6);
+    assert.equal(db.pragma("user_version", { simple: true }), 7);
     assert.equal(
       db
         .prepare(

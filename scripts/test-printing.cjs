@@ -356,7 +356,7 @@ app.whenReady().then(async () => {
       ).ok,
       true,
     );
-    assert.equal(db.pragma("user_version", { simple: true }), 6);
+    assert.equal(db.pragma("user_version", { simple: true }), 7);
     assert.deepEqual(db.pragma("foreign_key_check"), []);
     // Only intentional fixture changes occurred; printing APIs introduce no writes.
     const afterFixture = db.serialize();

@@ -82,6 +82,9 @@ app.whenReady().then(() => {
       credit_due: 0,
       paid: 5000,
       outstanding: 105000,
+      shipment_cost: 0,
+      landed_total: 110000,
+      supplier_invoice_total: 110000,
     });
     assert.equal(service.getPurchases({ supplier_id: 2 }).totalRows, 0);
     assert.equal(
@@ -282,7 +285,7 @@ app.whenReady().then(() => {
     }
     unregister();
     assert.equal(handlers.size, 0);
-    assert.equal(db.pragma("user_version", { simple: true }), 6);
+    assert.equal(db.pragma("user_version", { simple: true }), 7);
     assert.deepEqual(db.pragma("foreign_key_check"), []);
     db.close();
     db = openDatabase(filename, { readonly: true });

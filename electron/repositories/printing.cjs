@@ -26,6 +26,7 @@ function createPrintingRepository(db) {
     const c = kinds[kind];
     return prepare(
       withBalance(`SELECT i.id,i.invoice_number,i.subtotal,i.discount,i.total,i.notes,i.${c.date} AS date,
+      ${kind === 'purchase' ? 'i.shipment_cost,i.transporter_name,i.shipment_reference,' : ''}
       a.name AS contact_name,a.phone AS contact_phone,a.address AS contact_address,
       ${paymentTotal(c.payments, `${kind}_id`, "i.id")} AS paid_amount,
       ${returnTotal(kind, "i.id")} AS returned_value,i.total-${returnTotal(kind, "i.id")} AS effective_total,

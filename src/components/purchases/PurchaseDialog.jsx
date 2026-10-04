@@ -86,6 +86,9 @@ export default function PurchaseDialog({ suppliers, onClose, onSaved }) {
   const [notes, setNotes] = useState("");
   const [items, setItems] = useState([blankItem()]);
   const [discount, setDiscount] = useState("0");
+  const [shipment, setShipment] = useState("0");
+  const [transporter, setTransporter] = useState("");
+  const [shipmentReference, setShipmentReference] = useState("");
   const [paid, setPaid] = useState("0");
   const [method, setMethod] = useState("Cash");
   const [busy, setBusy] = useState(false);
@@ -98,6 +101,8 @@ export default function PurchaseDialog({ suppliers, onClose, onSaved }) {
   );
   const total = subtotal - (parsePrice(discount) || 0);
   const balance = total - (parsePrice(paid) || 0);
+  const shipmentCost = parsePrice(shipment.trim() || "0");
+  const landedTotal = total + (shipmentCost ?? 0);
   function change(key, patch) {
     if (
       patch.product &&
@@ -137,8 +142,13 @@ export default function PurchaseDialog({ suppliers, onClose, onSaved }) {
       );
       return;
     }
-    if ([discount, paid].some((value) => parsePrice(value) === null)) {
+    if ([discount, paid].some((value) => parsePrice(value) === null) || shipmentCost === null) {
       setError("Enter non-negative amounts with at most two decimal places.");
+      return;
+    }
+    if (!Number.isSafeInteger(subtotal) || !Number.isSafeInteger(landedTotal) ||
+      items.some(item => !Number.isSafeInteger(Number(item.quantity) * parsePrice(item.cost)))) {
+      setError("Purchase or landed cost exceeds the supported integer range.");
       return;
     }
     saving.current = true;
@@ -156,6 +166,9 @@ export default function PurchaseDialog({ suppliers, onClose, onSaved }) {
             unit_cost: parsePrice(item.cost),
           })),
           discount: parsePrice(discount),
+          shipment_cost: shipmentCost,
+          transporter_name: transporter,
+          shipment_reference: shipmentReference,
           paid_amount: parsePrice(paid),
           payment_method: method,
         }),
@@ -294,7 +307,7 @@ export default function PurchaseDialog({ suppliers, onClose, onSaved }) {
                 onChange={(e) => setDiscount(e.target.value)}
               />
               <TextField
-                label="Paid amount (Rs.)"
+                label="Supplier paid amount (Rs.)"
                 name="purchase-paid"
                 value={paid}
                 onChange={(e) => setPaid(e.target.value)}
@@ -312,13 +325,31 @@ export default function PurchaseDialog({ suppliers, onClose, onSaved }) {
                 ))}
               </TextField>
             </div>
+            <div className="mt-5 flex flex-wrap gap-4">
+              <TextField
+                label="Shipment / Delivery Cost (Rs.)"
+                name="purchase-shipment"
+                value={shipment}
+                onChange={(e) => setShipment(e.target.value)}
+                error={shipmentCost === null}
+                helperText="Freight/delivery paid separately to the transporter. This does not increase the supplier invoice."
+                sx={{ flex: 2, minWidth: 280 }}
+              />
+              <TextField label="Transporter Name (optional)" name="purchase-transporter" value={transporter}
+                onChange={(e) => setTransporter(e.target.value)} slotProps={{ htmlInput: { maxLength: 200 } }} />
+              <TextField label="Shipment Reference / Bilty No. (optional)" name="purchase-shipment-reference" value={shipmentReference}
+                onChange={(e) => setShipmentReference(e.target.value)} slotProps={{ htmlInput: { maxLength: 200 } }} />
+            </div>
             <div
               className="my-5 flex flex-wrap gap-8 rounded-lg bg-slate-50 p-5"
               aria-live="polite"
             >
-              <span>Subtotal: {formatPrice(subtotal)}</span>
-              <strong>Total: {formatPrice(total)}</strong>
-              <span>Balance: {formatPrice(balance)}</span>
+              <span>Items Subtotal: {formatPrice(subtotal)}</span>
+              <span>Discount: {formatPrice(parsePrice(discount) || 0)}</span>
+              <strong>Supplier Invoice Total: {formatPrice(total)}</strong>
+              <span>Supplier Payable: {formatPrice(balance)}</span>
+              <span>Shipment / Delivery Cost: {shipmentCost === null ? "Invalid amount" : formatPrice(shipmentCost)}</span>
+              <strong>Total Landed Purchase Cost: {Number.isSafeInteger(landedTotal) ? formatPrice(landedTotal) : "Amount exceeds supported range"}</strong>
             </div>
             <TextField
               fullWidth

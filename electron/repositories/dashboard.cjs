@@ -8,8 +8,10 @@ const {
   paymentTotal,
   effectiveTotal,
   returnedQuantity,
+  registerCostFunctions,
 } = require("./analytics.cjs");
 function createDashboardRepository(db) {
+  registerCostFunctions(db);
   const one = (sql) => db.prepare(sql).safeIntegers();
   const sales = one(
     `SELECT COUNT(*) AS saleCount,COALESCE(SUM(${effectiveTotal("sale", "sales.id", "total")}),0) AS salesRevenue FROM sales WHERE ${within("sold_at")}`,

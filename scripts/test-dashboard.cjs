@@ -245,7 +245,7 @@ app.whenReady().then(() => {
       "VALIDATION",
     );
     assert.equal(handler({ trusted: true }, filters).ok, true);
-    assert.equal(db.pragma("user_version", { simple: true }), 6);
+    assert.equal(db.pragma("user_version", { simple: true }), 7);
     assert.deepEqual(db.pragma("foreign_key_check"), []);
     db.close();
     db = openDatabase(filename, { readonly: true });

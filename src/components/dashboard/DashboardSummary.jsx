@@ -19,7 +19,7 @@ export default function DashboardSummary({ summary: s }) {
       s.grossProfit === null ? "Incomplete" : formatPrice(s.grossProfit),
       s.grossProfit === null
         ? `${s.unknownCostItemCount} sale item(s) with unknown / zero cost`
-        : "After discounts, less historical item cost",
+        : "After discounts, less historical item cost including allocated freight",
     ],
     [
       "Expenses",

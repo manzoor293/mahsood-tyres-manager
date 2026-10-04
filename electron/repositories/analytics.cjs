@@ -20,7 +20,12 @@ const withBalance = (
   sql,
 ) => `SELECT *,MAX(effective_total-paid_amount,0) AS balance,MAX(paid_amount-effective_total,0) AS credit_due,
   CASE WHEN paid_amount>effective_total THEN 'credit' WHEN paid_amount=effective_total THEN 'paid' WHEN paid_amount>0 THEN 'partial' ELSE 'unpaid' END AS payment_status FROM (${sql})`;
-const historicalCost = `COALESCE(SUM((i.quantity-${returnedQuantity("sale", "i.id")})*i.unit_cost),0)`;
+const historicalCost = `COALESCE(SUM((i.quantity-${returnedQuantity("sale", "i.id")})*i.unit_cost
+  + remaining_shipment_cost(i.allocated_shipment_cost,i.quantity,${returnedQuantity("sale", "i.id")})),0)`;
+function registerCostFunctions(db) {
+  db.function('remaining_shipment_cost', { deterministic: true, safeIntegers: true }, (freight, quantity, returned) =>
+    freight - returned * freight / quantity);
+}
 const unknownCosts =
   "COALESCE(SUM(CASE WHEN i.unit_cost=0 THEN 1 ELSE 0 END),0)";
 const localTime = (column) =>
@@ -36,4 +41,5 @@ module.exports = {
   returnTotal,
   effectiveTotal,
   withBalance,
+  registerCostFunctions,
 };
