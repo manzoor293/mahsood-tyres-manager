@@ -43,7 +43,7 @@ function renderDocument(document) {
   if (['saleInvoice', 'purchaseInvoice'].includes(d.type))
     return renderCompactInvoice(d, { escapeHtml, money, date, paragraphs, itemTable });
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src 'none'; base-uri 'none'; form-action 'none'"><title>${escapeHtml(d.title)} - ${escapeHtml(d.reference)}</title><style>${css}</style></head><body><main class="document">
-    <header><h1>${escapeHtml(shop.name)}</h1>${paragraphs([shop.address, shop.phone && `Phone: ${shop.phone}`, shop.alternatePhone && `Alternate phone: ${shop.alternatePhone}`, shop.email && `Email: ${shop.email}`, shop.ntn && `NTN / registration: ${shop.ntn}`])}</header>
+    <header><h1>Mahsood Tyres</h1>${paragraphs([shop.address, shop.phone && `Phone: ${shop.phone}`, shop.alternatePhone && `Alternate phone: ${shop.alternatePhone}`, shop.email && `Email: ${shop.email}`, shop.ntn && `NTN / registration: ${shop.ntn}`])}</header>
     <h2>${escapeHtml(d.title)}</h2><div class="meta"><div>${paragraphs([`Reference: ${d.reference}`, `Date: ${date(d.date)}`, d.invoiceReference && d.invoiceReference !== d.reference && `Related invoice: ${d.invoiceReference}`])}</div><div><p class="label">${escapeHtml(d.contactLabel)}</p>${paragraphs([d.contact.name, d.contact.phone, d.contact.address])}</div></div>
     <h3>${escapeHtml(d.sectionTitle)}</h3>${itemTable}${totals(d.totals)}${d.method ? `<p>Payment method: ${escapeHtml(d.method)}</p>` : ""}
     ${d.explanation ? `<p class="explanation">${escapeHtml(d.explanation)}</p>` : ""}

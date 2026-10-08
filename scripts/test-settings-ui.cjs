@@ -124,7 +124,7 @@ app.on("browser-window-created", (_, window) => {
         "window.api.printing.preview('saleInvoice', 1)",
       );
       assert.equal(preview.ok, true);
-      assert.match(preview.data.html, /UI Configured Shop/);
+      assert.match(preview.data.html, /Mahsood Tyres/);
       assert.match(preview.data.html, /Thank you from UI/);
       assert.doesNotMatch(preview.data.html, /Historical unit cost/);
       await edit("email", "invalid");
@@ -168,7 +168,7 @@ app.on("browser-window-created", (_, window) => {
       const restored = await evaluate(
         "window.api.printing.preview('saleInvoice', 1)",
       );
-      assert.match(restored.data.html, /Retry saved/);
+      assert.match(restored.data.html, /Mahsood Tyres/);
       window.setSize(640, 480);
       await new Promise((resolve) => setTimeout(resolve, 250));
       assert.equal(

@@ -1,5 +1,5 @@
-import { stockLabel } from '../../utils/units.js';
-import { Paper } from "@mui/material";
+import { stockLabel } from "../../utils/units.js";
+import DashboardMetricCard from "./DashboardMetricCard.jsx";
 import { formatPrice } from "../../utils/catalog.js";
 
 export default function DashboardSummary({ summary: s }) {
@@ -19,7 +19,7 @@ export default function DashboardSummary({ summary: s }) {
       s.grossProfit === null ? "Incomplete" : formatPrice(s.grossProfit),
       s.grossProfit === null
         ? `${s.unknownCostItemCount} sale item(s) with unknown / zero cost`
-        : "After discounts, less historical item cost",
+        : "After discounts, less historical item cost including allocated freight",
     ],
     [
       "Expenses",
@@ -62,24 +62,31 @@ export default function DashboardSummary({ summary: s }) {
       "Current · active products; low excludes zero stock",
     ],
   ];
+  const visuals = [
+    ["receipt", "teal"], ["wallet", "blue"], ["chart", "emerald"],
+    ["wallet", "red"], ["truck", "indigo"], ["people", "amber"],
+    ["truck", "orange"], ["wallet", "cyan"], ["wallet", "violet"],
+    ["tyre", "slate"],
+    ["inventory", s.outOfStockCount > 0 ? "red" : s.lowStockCount > 0 ? "amber" : "emerald"],
+  ];
+  const groups = [
+    { title: "Sales & profit", layout: "sales", indices: [0, 1, 2, 3] },
+    { title: "Purchases & balances", layout: "balances", indices: [4, 5, 6] },
+    { title: "Credits & inventory", layout: "current", indices: [7, 8, 9, 10] },
+  ];
   return (
-    <div
-      className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3"
-      aria-label="Dashboard summary"
-    >
-      {cards.map(([label, value, note]) => (
-        <Paper
-          key={label}
-          variant="outlined"
-          sx={{ p: 2.5, minWidth: 0 }}
-          data-metric={label}
-        >
-          <h2 className="text-sm font-medium text-slate-500">{label}</h2>
-          <p className="my-2 break-words text-2xl font-semibold tracking-tight">
-            {value}
-          </p>
-          <p className="text-xs leading-5 text-slate-500">{note}</p>
-        </Paper>
+    <div aria-label="Dashboard summary">
+      {groups.map((group) => (
+        <section key={group.title} className="dashboard-section" aria-label={group.title}>
+          <div className="dashboard-section-heading"><h2>{group.title}</h2></div>
+          <div className={`dashboard-grid dashboard-grid-${group.layout}`}>
+            {group.indices.map((index) => {
+              const [title, value, description] = cards[index];
+              const [icon, tone] = visuals[index];
+              return <DashboardMetricCard key={title} title={title} value={value} description={description} icon={icon} tone={tone} badge={index < 5 ? "Period" : "Current"} emphasis={[0, 1, 2, 4].includes(index)} />;
+            })}
+          </div>
+        </section>
       ))}
     </div>
   );

@@ -7,3 +7,10 @@ artifacts/
 !.env.example
 release/
 package.json.backup
+*.sqlite
+*.sqlite3
+*.db
+*-wal
+*-shm
+.DS_Store
+Thumbs.db

@@ -197,6 +197,37 @@ app.on("browser-window-created", (_, window) => {
         path.join(__dirname, "../artifacts/dashboard-ui.png"),
         (await window.webContents.capturePage()).toPNG(),
       );
+      const summary = service.getOverview({ period: "month" }).summary;
+      const { formatPrice } = await import("../src/utils/catalog.js");
+      const { stockLabel } = await import("../src/utils/units.js");
+      const expected = {
+        "Sales Revenue": formatPrice(summary.salesRevenue),
+        "Amount Received": formatPrice(summary.amountReceived),
+        "Gross Profit": formatPrice(summary.grossProfit),
+        "Expenses": formatPrice(summary.expenses),
+        "Purchases": formatPrice(summary.purchaseTotal),
+        "Customer Receivables": formatPrice(summary.customerReceivables),
+        "Supplier Payables": formatPrice(summary.supplierPayables),
+        "Customer Credit / Refund Due": formatPrice(summary.customerCreditDue),
+        "Supplier Credit Due": formatPrice(summary.supplierCreditDue),
+        "Stock": stockLabel(summary.stockUnits),
+        "Stock Alerts": `${summary.lowStockCount} low / ${summary.outOfStockCount} out`,
+      };
+      assert.equal(await evaluate("document.querySelectorAll('[data-metric]').length"), 11);
+      for (const [label, value] of Object.entries(expected)) {
+        assert.ok(await evaluate(metric(label, value)), label);
+      }
+      for (const width of [1920, 1366, 1024, 768]) {
+        window.setSize(width, 1000);
+        await new Promise((resolve) => setTimeout(resolve, 250));
+        assert.equal(await evaluate("document.documentElement.scrollWidth > innerWidth"), false, `Page overflow at ${width}`);
+        assert.ok(await evaluate(`Array.from(document.querySelectorAll('[data-metric]')).every(e => e.scrollWidth <= e.clientWidth)`), `Card overflow at ${width}`);
+        fs.writeFileSync(path.join(__dirname, `../artifacts/dashboard-${width}.png`), (await window.webContents.capturePage()).toPNG());
+        // Presentation-only stress check; restore the rendered text before continuing.
+        await evaluate(`window.dashboardOriginalValues = Array.from(document.querySelectorAll('.dashboard-metric-value'), e => e.textContent); document.querySelectorAll('.dashboard-metric-value').forEach(e => e.textContent = 'Rs. 125,000,000');`);
+        assert.ok(await evaluate(`Array.from(document.querySelectorAll('.dashboard-metric-value')).every(e => e.scrollWidth <= e.clientWidth)`), `Long value overflow at ${width}`);
+        await evaluate(`document.querySelectorAll('.dashboard-metric-value').forEach((e, i) => e.textContent = window.dashboardOriginalValues[i]); delete window.dashboardOriginalValues;`);
+      }
       window.setSize(640, 480);
       await new Promise((r) => setTimeout(r, 250));
       assert.equal(

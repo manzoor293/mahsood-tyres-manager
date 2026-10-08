@@ -1,4 +1,4 @@
-const { returnTotal, withBalance } = require("./analytics.cjs");
+const { returnTotal, withBalance, localDate } = require("./analytics.cjs");
 function createSaleRepository(db) {
   const summary = `SELECT s.*,c.name AS customer_name,c.phone AS customer_phone,c.address AS customer_address,
     ${returnTotal("sale", "s.id")} AS returned_value,s.total-${returnTotal("sale", "s.id")} AS effective_total,
@@ -17,19 +17,21 @@ function createSaleRepository(db) {
   const list = db.prepare(`SELECT * FROM (${projection}) WHERE
     (@search='' OR instr(lower(invoice_number),lower(@search))>0 OR instr(lower(coalesce(customer_name,'')),lower(@search))>0)
     AND (@customer_id IS NULL OR customer_id=@customer_id) AND (@walk_in=0 OR customer_id IS NULL)
-    AND (@from_date IS NULL OR substr(sold_at,1,10)>=@from_date) AND (@to_date IS NULL OR substr(sold_at,1,10)<=@to_date)
+    AND (@from_date IS NULL OR ${localDate('sold_at')}>=@from_date) AND (@to_date IS NULL OR ${localDate('sold_at')}<=@to_date)
     AND (@payment_status='all' OR payment_status=@payment_status)
     ORDER BY sold_at DESC,id DESC LIMIT @limit OFFSET @offset`);
   const product = db.prepare(`SELECT p.id,p.sku,p.active,i.quantity,
-    COALESCE((SELECT unit_cost FROM purchase_items WHERE product_id=p.id ORDER BY id DESC LIMIT 1),0) AS unit_cost,
-    COALESCE((SELECT units_per_transaction_unit FROM purchase_items WHERE product_id=p.id ORDER BY id DESC LIMIT 1),1) AS cost_units_per_unit
-    FROM products p LEFT JOIN inventory i ON i.product_id=p.id WHERE p.id=?`);
+    COALESCE(pi.unit_cost,0) AS unit_cost,COALESCE(pi.units_per_transaction_unit,1) AS cost_units_per_unit,
+    pi.id AS shipment_purchase_item_id,pi.quantity AS purchase_quantity,COALESCE(pi.allocated_shipment_cost,0) AS shipment_basis
+    FROM products p LEFT JOIN inventory i ON i.product_id=p.id
+    LEFT JOIN purchase_items pi ON pi.id=(SELECT id FROM purchase_items WHERE product_id=p.id ORDER BY id DESC LIMIT 1)
+    WHERE p.id=?`);
   const invoice = db.prepare("SELECT id FROM sales WHERE invoice_number=?");
   const insert =
     db.prepare(`INSERT INTO sales(invoice_number,customer_id,subtotal,discount,total,sold_at,notes)
     VALUES (@invoice_number,@customer_id,@subtotal,@discount,@total,@sold_at,@notes)`);
   const insertItem = db.prepare(
-    "INSERT INTO sale_items(sale_id,product_id,quantity,unit_price,unit_cost,units_per_transaction_unit) VALUES (?,?,?,?,?,?)",
+    "INSERT INTO sale_items(sale_id,product_id,quantity,unit_price,unit_cost,units_per_transaction_unit,allocated_shipment_cost,shipment_purchase_item_id,shipment_offset) VALUES (?,?,?,?,?,?,?,?,?)",
   );
   const movement =
     db.prepare(`INSERT INTO stock_movements(product_id,movement_type,quantity_change,sale_item_id,unit_cost)
@@ -45,6 +47,10 @@ function createSaleRepository(db) {
     customer: (id) =>
       db.prepare("SELECT active FROM customers WHERE id=?").get(id),
     product: (id) => product.get(id),
+    shipmentOffset(sourceId, physicalBasis) {
+      const rows = db.prepare('SELECT quantity,units_per_transaction_unit FROM sale_items WHERE shipment_purchase_item_id=?').safeIntegers().all(sourceId);
+      return Number(rows.reduce((sum, row) => sum + row.quantity * row.units_per_transaction_unit, 0n) % BigInt(physicalBasis));
+    },
     invoiceExists: (value) => Boolean(invoice.get(value)),
     nextInvoice() {
       // Called only under BEGIN IMMEDIATE: other writers cannot allocate the same number.
@@ -67,6 +73,9 @@ function createSaleRepository(db) {
         item.unit_price,
         item.unit_cost,
         item.units_per_transaction_unit,
+        item.allocated_shipment_cost,
+        item.shipment_purchase_item_id,
+        item.shipment_offset,
       ).lastInsertRowid;
       // The existing trigger applies the negative movement to inventory.
       movement.run(item.product_id, -item.physical_quantity, id, item.unit_cost);

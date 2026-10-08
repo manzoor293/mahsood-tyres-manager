@@ -63,7 +63,7 @@ app.on("browser-window-created", (_event, window) => {
         await new Promise((resolve) => setTimeout(resolve, 100));
       }
       assert.equal(state.title, "Dashboard");
-      assert.ok(state.header.includes("Mahsood Tyre Manager"));
+      assert.ok(state.header.includes("Mahsood Tyres"));
       assert.ok(
         state.header.includes("Sales, Inventory & Shop Management System"),
       );
@@ -144,7 +144,7 @@ app.on("browser-window-created", (_event, window) => {
             loaded: Boolean(logo?.naturalWidth),
             fit: logo && getComputedStyle(logo).objectFit,
             business: sidebar.textContent.includes('Mahsood Tyres'),
-            software: header.textContent.includes('Mahsood Tyre Manager'),
+            software: header.textContent.includes('Mahsood Tyres') && header.textContent.includes('Sales, Inventory & Shop Management System'),
             fits: sidebar.scrollWidth === sidebar.clientWidth && header.scrollWidth === header.clientWidth,
           };
         })()`);

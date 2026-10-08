@@ -4,7 +4,11 @@ Sales, Inventory & Shop Management System
 
 ## Local Administrator sign-in
 
-The current database is **schema 5, with 21 application tables**. Migration `005-administrator.sql` adds only a single-row `administrator` table (ID constrained to 1), leaving migrations 001–004 and existing business data unchanged. Older module notes below describe the schema at the time those modules were introduced.
+The current database is **schema 7, with 21 application tables**. Migration `005-administrator.sql` adds the single local Administrator account; `006-pair-transactions.sql` adds pair metadata while preserving historical tyre units; `007-purchase-shipment-cost.sql` adds exact shipment and historical landed-cost fields. Older module notes below describe the schema at the time those modules were introduced.
+
+Release hardening results and remaining gates are documented in [the v0.2.0 audit](docs/release-audit-v0.2.0.md). The version remains 0.1.0 until release approval. Run `node scripts/test-release-regressions.mjs` to discover and execute all package test scripts, then build and both Electron smoke modes, using isolated profiles. Evidence is written to ignored `artifacts/release-audit/`.
+
+Electron's internal name remains **Mahsood Tyre Manager** to preserve the v0.1.0 profile location; visible window and print branding uses **Mahsood Tyres**. A pre-release-only branded profile is preserved when no legacy database exists. If both default profile folders contain databases, startup stops before opening either database. Back up and review both profiles before choosing the authoritative shop database; no automatic merge or replacement is performed.
 
 On first launch, or after upgrading a database without credentials, create the one local Administrator account using an email, password (at least 8 characters), and matching confirmation. Email is trimmed and lowercased; it is an offline identifier, not an externally verified address. Subsequent launches require sign-in. There are no default credentials, extra users, roles, cloud authentication, remember-me tokens, or password-recovery/master-password mechanisms in this release.
 

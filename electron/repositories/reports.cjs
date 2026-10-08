@@ -7,6 +7,7 @@ const {
   unknownCosts,
   returnTotal,
   withBalance,
+  registerCostFunctions,
 } = require("./analytics.cjs");
 
 const saleFacts = `SELECT s.*,c.name AS contact_name,c.phone,
@@ -18,6 +19,7 @@ const saleFacts = `SELECT s.*,c.name AS contact_name,c.phone,
   (SELECT ${unknownCosts} FROM sale_items i WHERE i.sale_id=s.id) AS unknownCostItemCount
   FROM sales s LEFT JOIN customers c ON c.id=s.customer_id`;
 const purchaseFacts = `SELECT p.*,s.name AS contact_name,s.phone,
+  p.total+p.shipment_cost AS landed_total,
   ${returnTotal("purchase", "p.id")} AS returned_value,p.total-${returnTotal("purchase", "p.id")} AS effective_total,
   (SELECT COUNT(*) FROM purchase_items WHERE purchase_id=p.id) AS item_count,
   ${paymentTotal("supplier_payments", "purchase_id", "p.id")} AS paid_amount
@@ -34,6 +36,7 @@ const movements = `SELECT m.*,p.sku,p.model,p.size,
 const sum = (field, alias = field) => `COALESCE(SUM(${field}),0) AS ${alias}`;
 
 function createReportsRepository(db) {
+  registerCostFunctions(db);
   const prepare = (sql) => db.prepare(sql).safeIntegers();
   function report(source, where, summary, order) {
     const filtered = `SELECT * FROM (${source}) AS report_rows WHERE ${where}`;
@@ -62,7 +65,7 @@ function createReportsRepository(db) {
   const purchases = report(
     withBalance(purchaseFacts),
     invoiceWhere("purchased_at", "supplier_id"),
-    invoiceSummary,
+    `${invoiceSummary},${sum("shipment_cost")},${sum("landed_total")},${sum("total", "supplier_invoice_total")}`,
     `${localTime("purchased_at")} DESC,id DESC`,
   );
   const inventory = report(

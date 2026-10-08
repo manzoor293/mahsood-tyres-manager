@@ -9,7 +9,9 @@ const directory = fs.mkdtempSync(
 );
 const env = { ...process.env, MAHSOOD_UI_TEST_DATA: directory };
 delete env.ELECTRON_RUN_AS_NODE;
-const entry = process.argv.includes("--pairs-backend") ? "scripts/test-pairs.cjs"
+const entry = process.argv.includes("--shipment-backend") ? "scripts/test-shipment.cjs"
+  : process.argv.includes("--shipment-ui") ? "scripts/test-shipment-ui.cjs"
+  : process.argv.includes("--pairs-backend") ? "scripts/test-pairs.cjs"
   : process.argv.includes("--pairs-ui") ? "scripts/test-pairs-ui.cjs"
   : process.argv.includes("--ledger-backend") ? "scripts/test-ledger.cjs"
   : process.argv.includes("--ledger-ui") ? "scripts/test-ledger-ui.cjs"

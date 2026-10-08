@@ -1,4 +1,5 @@
-import { quantityLabel, unitName } from '../../utils/units.js';
+import { quantityLabel, unitName } from "../../utils/units.js";
+import { formatLandedUnitCost } from "../../utils/landedCost.js";
 import StatusBadge from "../StatusBadge.jsx";
 import PrintActions from "../printing/PrintActions.jsx";
 import {
@@ -18,6 +19,15 @@ import {
 import { formatPrice } from "../../utils/catalog.js";
 
 export default function PurchaseDetails({ purchase: p, onClose }) {
+  const factors = new Set(
+    p.items.map((item) => item.units_per_transaction_unit),
+  );
+  const unit =
+    factors.size === 1
+      ? unitName(p.items[0].units_per_transaction_unit)
+      : "Saved Unit";
+  const quantityHeading =
+    factors.size === 1 ? `Qty (${unit}s)` : "Qty (Saved Units)";
   return (
     <Dialog
       open
@@ -38,48 +48,141 @@ export default function PurchaseDetails({ purchase: p, onClose }) {
           Completed purchase — read-only. Stock and historical costs are
           preserved.
         </Alert>
-        <TableContainer>
-          <Table aria-label="Purchase items">
+        <TableContainer sx={{ overflowX: "auto" }}>
+          <Table aria-label="Purchase items" sx={{ minWidth: 1200 }}>
             <TableHead>
               <TableRow>
-                {["Product", "Quantity", "Price / indicated unit", "Line total"].map(
-                  (label) => (
-                    <TableCell key={label}>{label}</TableCell>
-                  ),
-                )}
+                {[
+                  "SKU",
+                  "Product / Brand / Model",
+                  "Tyre Size",
+                  quantityHeading,
+                  `Supplier Price / ${unit}`,
+                  "Supplier Line Total",
+                  "Allocated Shipment",
+                  "Landed Line Cost",
+                  `Landed Cost / ${unit}`,
+                ].map((label, index) => (
+                  <TableCell
+                    key={label}
+                    align={
+                      index === 3 ? "center" : index >= 4 ? "right" : "left"
+                    }
+                  >
+                    {label}
+                  </TableCell>
+                ))}
               </TableRow>
             </TableHead>
             <TableBody>
               {p.items.map((item) => (
                 <TableRow key={item.id}>
+                  <TableCell>{item.sku}</TableCell>
                   <TableCell>
-                    {item.sku} · {item.model} · {item.size}
+                    {[item.brand_name, item.model].filter(Boolean).join(" · ")}
                   </TableCell>
-                  <TableCell>{quantityLabel(item.quantity, item.units_per_transaction_unit)}</TableCell>
-                  <TableCell>{formatPrice(item.unit_cost)} / {unitName(item.units_per_transaction_unit).toLowerCase()}</TableCell>
-                  <TableCell>{formatPrice(item.line_total)}</TableCell>
+                  <TableCell>{item.size}</TableCell>
+                  <TableCell align="center">
+                    {quantityLabel(
+                      item.quantity,
+                      item.units_per_transaction_unit,
+                    )}
+                  </TableCell>
+                  <TableCell align="right">
+                    {formatPrice(item.unit_cost)} /{" "}
+                    {unitName(item.units_per_transaction_unit).toLowerCase()}
+                  </TableCell>
+                  <TableCell align="right">
+                    {formatPrice(item.line_total)}
+                  </TableCell>
+                  <TableCell align="right">
+                    {formatPrice(item.allocated_shipment_cost)}
+                  </TableCell>
+                  <TableCell align="right">
+                    {formatPrice(item.landed_line_total)}
+                  </TableCell>
+                  <TableCell
+                    align="right"
+                    title={`Average landed cost per ${unitName(item.units_per_transaction_unit).toLowerCase()}. Line landed cost is authoritative where freight does not divide evenly.`}
+                  >
+                    {formatLandedUnitCost(
+                      item.landed_line_total,
+                      item.quantity,
+                    )}
+                    {factors.size > 1 &&
+                      ` / ${unitName(item.units_per_transaction_unit).toLowerCase()}`}
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
         </TableContainer>
-        <dl className="ml-auto my-5 grid max-w-sm grid-cols-2 gap-3">
-          {[
-            ["Subtotal", p.subtotal],
-            ["Discount", p.discount],
-            ["Total", p.total],
-            ["Returned value", p.returned_value],
-            ["Effective total", p.effective_total],
-            ["Supplier credit due", p.credit_due],
-            ["Amount paid", p.paid_amount],
-            ["Remaining balance", p.balance],
-          ].map(([label, value]) => (
-            <div className="contents" key={label}>
-              <dt>{label}</dt>
-              <dd className="text-right font-semibold">{formatPrice(value)}</dd>
-            </div>
-          ))}
-        </dl>
+        <p className="mt-2 text-xs text-slate-500">
+          Landed line costs above are supplier goods value plus freight, before
+          invoice discount.
+        </p>
+        {[
+          [
+            "Original supplier invoice",
+            [
+              ["Subtotal", p.subtotal],
+              ["Discount", p.discount],
+              ["Supplier Invoice Total", p.total],
+            ],
+          ],
+          [
+            "Separate acquisition cost",
+            [
+              ["Shipment / Delivery Cost", p.shipment_cost],
+              ["Total Landed Purchase Cost", p.landed_total],
+            ],
+          ],
+          [
+            "Current supplier position",
+            [
+              ["Returned value", p.returned_value],
+              ["Effective supplier total", p.effective_total],
+              ["Supplier credit due", p.credit_due],
+              ["Amount paid", p.paid_amount],
+              ["Supplier Payable", p.balance],
+            ],
+          ],
+        ].map(([heading, rows]) => (
+          <section
+            key={heading}
+            className="ml-auto my-4 max-w-lg rounded-lg border border-slate-200 p-4"
+          >
+            <h3 className="mb-3 font-semibold">{heading}</h3>
+            <dl className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-5 gap-y-2">
+              {rows.map(([label, value]) => (
+                <div className="contents" key={label}>
+                  <dt>{label}</dt>
+                  <dd className="text-right font-semibold">
+                    {formatPrice(value)}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          </section>
+        ))}
+        <Alert severity="info" sx={{ mb: 2 }}>
+          Freight is a separate transporter acquisition cost, excluded from
+          supplier payable. Purchase returns do not refund freight or reallocate
+          it to other goods. Transporter payment history is not tracked here.
+        </Alert>
+        {p.transporter_name && <p>Transporter: {p.transporter_name}</p>}
+        {p.shipment_reference && (
+          <p>Shipment Reference / Bilty No.: {p.shipment_reference}</p>
+        )}
+        <p className="my-2 text-sm text-slate-500">
+          Freight associated with supplier-returned goods (still incurred):{" "}
+          {formatPrice(
+            p.items.reduce(
+              (sum, item) => sum + item.freight_on_returned_goods,
+              0,
+            ),
+          )}
+        </p>
         {p.payments.map((payment) => (
           <p key={payment.id} className="text-sm text-slate-500">
             Payment: {payment.payment_method} · {payment.paid_at.slice(0, 10)} ·{" "}

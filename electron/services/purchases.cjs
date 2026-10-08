@@ -1,5 +1,6 @@
 const v = require('./validation.cjs');
 const { physicalQuantity, multiply } = require('./units.cjs');
+const { allocateShipment, money } = require('./shipment.cjs');
 const { createPurchaseRepository } = require('../repositories/purchases.cjs');
 
 function date(value, field) {
@@ -31,12 +32,15 @@ function createPurchaseService(database) {
       return repository.list(filters);
     },
     create: (input) => database.transaction(() => {
-      v.object(input, ['supplier_id','invoice_number','purchased_at','notes','items','discount','paid_amount','payment_method']);
+      v.object(input, ['supplier_id','invoice_number','purchased_at','notes','items','discount','paid_amount','payment_method','shipment_cost','transporter_name','shipment_reference']);
       const data = {
         supplier_id: v.id(input.supplier_id), invoice_number: v.text(input.invoice_number, 'Invoice number'),
         purchased_at: date(input.purchased_at, 'Purchase date'), notes: v.text(input.notes, 'Notes', 5000, true),
         discount: v.integer(input.discount ?? 0, 'Discount'), paid_amount: v.integer(input.paid_amount ?? 0, 'Paid amount'),
         payment_method: v.text(input.payment_method ?? 'Cash', 'Payment method', 80),
+        shipment_cost: v.integer(input.shipment_cost ?? 0, 'Shipment / Delivery Cost'),
+        transporter_name: v.text(input.transporter_name, 'Transporter name', 200, true),
+        shipment_reference: v.text(input.shipment_reference, 'Shipment reference', 200, true),
       };
       if (!repository.supplier(data.supplier_id)?.active) v.invalid('Select an existing active supplier.');
       if (repository.invoiceExists(data.invoice_number)) throw new v.CatalogError('CONFLICT', 'Invoice number already exists.');
@@ -60,6 +64,9 @@ function createPurchaseService(database) {
       });
       if (data.discount > data.subtotal) v.invalid('Discount cannot exceed subtotal.');
       data.total = data.subtotal - data.discount;
+      money(BigInt(data.total) + BigInt(data.shipment_cost), 'Total landed purchase cost');
+      const allocations = allocateShipment(items, data.shipment_cost);
+      items.forEach((item, index) => { item.allocated_shipment_cost = allocations[index]; });
       if (data.paid_amount > data.total) v.invalid('Paid amount cannot exceed the purchase total.');
       const purchaseId = repository.insert(data);
       for (const item of items) repository.insertItem(purchaseId, item);

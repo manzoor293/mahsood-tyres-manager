@@ -1,13 +1,8 @@
 import { useEffect, useState } from "react";
-import {
-  Alert,
-  Button,
-  CircularProgress,
-  Paper,
-  TextField,
-} from "@mui/material";
+import { Alert, Button, SvgIcon, TextField } from "@mui/material";
 import { catalogRequest } from "../utils/catalog.js";
 import DashboardSummary from "../components/dashboard/DashboardSummary.jsx";
+import { DashboardSkeleton } from "../components/dashboard/DashboardMetricCard.jsx";
 import DashboardTrend from "../components/dashboard/DashboardTrend.jsx";
 import {
   TopProducts,
@@ -46,17 +41,35 @@ export default function DashboardPage() {
   const data = state.data;
   return (
     <section
-      className="mx-auto min-w-0 max-w-screen-2xl"
+      className="dashboard-page mx-auto min-w-0 max-w-screen-2xl"
       aria-labelledby="page-title"
     >
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
+      <div className="dashboard-header flex flex-wrap items-start justify-between gap-5">
         <div>
-          <h1 id="page-title" className="text-3xl font-semibold">
+          <h1
+            id="page-title"
+            className="text-3xl font-semibold tracking-tight text-slate-800"
+          >
             Dashboard
           </h1>
-          <p className="mt-2 text-sm text-slate-500">
+          <p className="mt-3 text-xs font-semibold uppercase tracking-widest text-teal-700">
+            Business overview
+          </p>
+          <p className="mt-1 text-sm text-slate-500">
             Sales, spending and stock at a glance.
           </p>
+          {data && (
+            <div
+              className="mt-4 text-xs leading-6 text-slate-500"
+              data-dashboard-range
+            >
+              <p className="font-medium text-slate-700">
+                {data.range.from} – {data.range.to}
+              </p>
+              <p>Both dates inclusive · {data.range.timeZone}</p>
+              <p>Balances and stock are current across all dates.</p>
+            </div>
+          )}
         </div>
         <div className="flex flex-wrap gap-2">
           <TextField
@@ -64,6 +77,12 @@ export default function DashboardPage() {
             size="small"
             label="Period"
             name="dashboard-period"
+            sx={{
+              minWidth: 155,
+              borderRadius: 2,
+              backgroundColor: "white",
+              "& .MuiOutlinedInput-root": { borderRadius: 2 },
+            }}
             value={filters.period}
             onChange={(e) => {
               const period = e.target.value;
@@ -90,7 +109,17 @@ export default function DashboardPage() {
             <option value="year">This year</option>
             <option value="custom">Custom range</option>
           </TextField>
-          <Button variant="outlined" disabled={state.loading} onClick={refresh}>
+          <Button
+            variant="outlined"
+            disabled={state.loading}
+            onClick={refresh}
+            sx={{ borderRadius: 2, backgroundColor: "white", px: 2 }}
+            startIcon={
+              <SvgIcon sx={{ fontSize: 18 }}>
+                <path d="M17.65 6.35A7.95 7.95 0 0 0 12 4a8 8 0 1 0 7.93 9h-2.02A6 6 0 1 1 12 6c1.66 0 3.14.69 4.22 1.78L13 11h8V3z" />
+              </SvgIcon>
+            }
+          >
             Refresh
           </Button>
         </div>
@@ -122,12 +151,7 @@ export default function DashboardPage() {
         </form>
       )}
       {state.loading ? (
-        <Paper variant="outlined" sx={{ p: 6 }}>
-          <div role="status" className="flex items-center justify-center gap-3">
-            <CircularProgress size={24} />
-            Loading dashboard...
-          </div>
-        </Paper>
+        <DashboardSkeleton />
       ) : state.error ? (
         <Alert
           severity="error"
@@ -138,14 +162,6 @@ export default function DashboardPage() {
       ) : (
         data && (
           <>
-            <p
-              className="mb-4 text-xs leading-5 text-slate-500"
-              data-dashboard-range
-            >
-              {data.range.from} – {data.range.to} · Both dates inclusive ·{" "}
-              {data.range.timeZone}. Balances and stock are current across all
-              dates.
-            </p>
             {!data.summary.saleCount &&
               !data.summary.purchaseCount &&
               !data.summary.expenses &&

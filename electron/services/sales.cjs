@@ -1,5 +1,6 @@
 const v = require('./validation.cjs');
 const { physicalQuantity, multiply, pairCost } = require('./units.cjs');
+const { freightForQuantity, money } = require('./shipment.cjs');
 const { createSaleRepository } = require('../repositories/sales.cjs');
 function date(value, field) {
   if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value) || !Number.isFinite(Date.parse(value))
@@ -64,7 +65,16 @@ function createSaleService(db) {
         result.physical_quantity = physicalQuantity(result.quantity);
         const product = stock(result.product_id, result.physical_quantity);
         result.unit_cost = pairCost(product.unit_cost, product.cost_units_per_unit);
-        multiply(result.quantity, result.unit_cost, 'Historical line cost');
+        const goodsCost = multiply(result.quantity, result.unit_cost, 'Historical line cost');
+        result.shipment_purchase_item_id = product.shipment_basis > 0 ? product.shipment_purchase_item_id : null;
+        result.shipment_offset = 0;
+        result.allocated_shipment_cost = 0;
+        if (result.shipment_purchase_item_id !== null) {
+          const basis = physicalQuantity(product.purchase_quantity, product.cost_units_per_unit);
+          result.shipment_offset = repository.shipmentOffset(result.shipment_purchase_item_id, basis);
+          result.allocated_shipment_cost = freightForQuantity(product.shipment_basis, basis, result.shipment_offset, result.physical_quantity);
+        }
+        money(BigInt(goodsCost) + BigInt(result.allocated_shipment_cost), 'Historical landed line cost');
         const lineTotal = multiply(result.quantity, result.unit_price, 'Line total');
         data.subtotal = v.integer(data.subtotal + lineTotal,'Subtotal');
         return result;

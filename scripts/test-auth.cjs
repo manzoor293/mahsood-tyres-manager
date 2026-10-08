@@ -46,9 +46,12 @@ app.whenReady().then(async () => {
     const before = allData(legacy);
     legacy.close();
     db = openDatabase(filename);
-    assert.equal(db.pragma("user_version", { simple: true }), 6);
+    assert.equal(db.pragma("user_version", { simple: true }), 7);
     const after = allData(db);
     delete after.administrator;
+    for (const row of after.purchases) { delete row.shipment_cost; delete row.transporter_name; delete row.shipment_reference; }
+    for (const row of after.purchase_items) delete row.allocated_shipment_cost;
+    for (const row of after.sale_items) { delete row.allocated_shipment_cost; delete row.shipment_purchase_item_id; delete row.shipment_offset; }
     for (const table of ["products", "purchase_items", "sale_items"]) for (const row of after[table]) { delete row.price_units_per_unit; delete row.units_per_transaction_unit; }
     assert.deepEqual(after, before);
     assert.equal(
@@ -259,7 +262,7 @@ app.whenReady().then(async () => {
         hasAdministrator: false,
         authenticated: false,
       });
-      assert.equal(db.pragma("user_version", { simple: true }), 6);
+      assert.equal(db.pragma("user_version", { simple: true }), 7);
     }
     assert.deepEqual(db.pragma("foreign_key_check"), []);
     console.log(

@@ -106,7 +106,7 @@ app.whenReady().then(async () => {
       assert.equal(document.footer, profile.footer);
       const html = printing.preview(type, 1).html;
       for (const value of [
-        "Updated Shop",
+        "Mahsood Tyres",
         profile.address,
         profile.phone,
         profile.alternatePhone,
@@ -124,7 +124,7 @@ app.whenReady().then(async () => {
         );
     }
     assert.equal(outputs.length, 12);
-    assert.ok(outputs.every((html) => html.includes("Updated Shop")));
+    assert.ok(outputs.every((html) => html.includes("Mahsood Tyres")));
     assert.deepEqual(
       documents.getDocument("saleInvoice", 1).items,
       original.items,
@@ -182,7 +182,7 @@ app.whenReady().then(async () => {
       handlers.get("settings:getShopProfile")({ trusted: true }).data,
       expected,
     );
-    assert.equal(db.pragma("user_version", { simple: true }), 6);
+    assert.equal(db.pragma("user_version", { simple: true }), 7);
     assert.equal(
       db
         .prepare(

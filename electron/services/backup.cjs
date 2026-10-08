@@ -3,7 +3,7 @@ const path = require('node:path');
 const { randomUUID } = require('node:crypto');
 const Database = require('better-sqlite3');
 const { migrate, schemaVersion } = require('../database/migrate.cjs');
-const { validateDatabase, inspectFile } = require('../database/backup-validation.cjs');
+const { validateDatabase } = require('../database/backup-validation.cjs');
 const { restorePaths, removeSidecars, writeMarker, recoverInterruptedRestore } = require('../database/restore-files.cjs');
 const { CatalogError } = require('./validation.cjs');
 

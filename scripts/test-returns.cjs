@@ -63,7 +63,7 @@ app.whenReady().then(() => {
           table,
           conn.prepare(`SELECT * FROM ${table} ORDER BY id`).all().map(row => {
             // Compare every historical field across the additive unit migration.
-            const { units_per_transaction_unit, ...historical } = row;
+            const { units_per_transaction_unit, allocated_shipment_cost, shipment_cost, transporter_name, shipment_reference, shipment_purchase_item_id, shipment_offset, ...historical } = row;
             return historical;
           }),
         ]),
@@ -72,7 +72,7 @@ app.whenReady().then(() => {
     legacy.close();
     legacy = null;
     db = openDatabase(filename);
-    assert.equal(db.pragma("user_version", { simple: true }), 6);
+    assert.equal(db.pragma("user_version", { simple: true }), 7);
     assert.deepEqual(snapshot(db, protectedTables), before);
     const services = createReturnServices(db),
       service = services[resource],

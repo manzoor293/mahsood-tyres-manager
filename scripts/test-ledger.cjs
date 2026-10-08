@@ -65,7 +65,7 @@ app.whenReady().then(async()=>{
     db.exec("UPDATE customers SET name='Khyber <>:/ Transport' WHERE id=1;");
     for(const party_type of ['customer','supplier']) {
       const q={party_type,party_id:1},preview=printing.preview(q);
-      assert.ok(preview.html.includes('Mahsood Test Shop'));assert.ok(preview.html.includes('TEST-NTN'));assert.ok(preview.html.includes('S.NO'));assert.ok(preview.html.includes('Complete Account History'));
+      assert.ok(preview.html.includes('<h1>Mahsood Tyres</h1>'));assert.ok(preview.html.includes('TEST-NTN'));assert.ok(preview.html.includes('S.NO'));assert.ok(preview.html.includes('Complete Account History'));
       assert.ok(!/[<>:"/\\|?*]/.test(preview.filename));
       assert.ok(printing.preview({...q,from_date:'2026-09-26',to_date:'2026-09-26'}).html.includes('2026-09-26 to 2026-09-26'));
       assert.equal((await printing.savePdf(q,owner)).status,'saved');assert.ok(bytes.toString('latin1').startsWith('%PDF'));
@@ -89,7 +89,7 @@ app.whenReady().then(async()=>{
     authenticated=true;
     for(const handler of handlers.values()) assert.equal((await handler({trusted:true,sender:owner.webContents},{})).error.code,'VALIDATION');
     await printing.savePdf({party_type:'customer',party_id:1},owner);assert.deepEqual(db.serialize(),snapshot);
-    assert.equal(db.pragma('user_version',{simple:true}),6);assert.deepEqual(db.pragma('foreign_key_check'),[]);
+    assert.equal(db.pragma('user_version',{simple:true}),7);assert.deepEqual(db.pragma('foreign_key_check'),[]);
     console.log('PASS Ledger: both account types, empty/inactive/walk-in, partial/full/multiple payments, multiple returns, credits, historical openings, date totals, stable balances, pagination/reconciliation, validation/auth, escaped print previews, safe filenames, real 10/50/125-row PDFs, intercepted native print, window cleanup and schema-6 read-only compatibility.');
   } catch(error){console.error(error);code=1;} finally {owner?.destroy();db?.close();clearTimeout(timeout);app.exit(code);}
 });

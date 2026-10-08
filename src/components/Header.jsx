@@ -23,7 +23,7 @@ export default function Header() {
       <Button sx={{ float: "right", ml: 2 }} disabled={busy} onClick={signOut}>
         {busy ? "Signing out..." : "Logout"}
       </Button>
-      <p className="text-lg font-semibold tracking-tight text-slate-900 uppercase">
+      <p className="text-lg font-extrabold tracking-widest uppercase text-red-600 underline decoration-2 decoration-black">
         Mahsood Tyres
       </p>
       <p className="mt-1 text-xs leading-5 text-slate-500">

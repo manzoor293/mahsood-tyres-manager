@@ -8,6 +8,7 @@ const migrations = [
   "004-returns.sql",
   "005-administrator.sql",
   "006-pair-transactions.sql",
+  "007-purchase-shipment-cost.sql",
 ];
 const schemaVersion = migrations.length;
 
