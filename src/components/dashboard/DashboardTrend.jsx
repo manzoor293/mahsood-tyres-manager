@@ -16,7 +16,7 @@ export default function DashboardTrend({ rows, grouping, summary }) {
     )
     .join(" ");
   return (
-    <Paper variant="outlined" sx={{ p: 2.5, minWidth: 0 }}>
+    <Paper variant="outlined" sx={{ p: 2.5, minWidth: 0, borderRadius: 3, borderColor: "#e0e7ee", boxShadow: "0 2px 5px #172b3a04" }}>
       <h2 className="text-lg font-semibold">Sales Trend</h2>
       <p className="mt-1 text-xs text-slate-500">
         {grouping === "month" ? "Monthly" : "Daily"} revenue after discounts ·

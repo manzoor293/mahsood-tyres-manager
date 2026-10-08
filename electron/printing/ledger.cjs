@@ -12,7 +12,7 @@ function renderLedger(statement,shop,generatedAt) {
   const p = values => values.filter(Boolean).map(value=>`<p>${e(value)}</p>`).join('');
   const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'"><title>${e(title)}</title><style>${css}
     .ledger-table {font-size:9px} .ledger-table td,.ledger-table th {padding:4px} .ledger-table .money {font-size:9px}
-    </style></head><body><main class="document"><header><h1>${e(shop.name)}</h1>${p([shop.address,shop.phone,shop.alternatePhone,shop.email,shop.ntn && `NTN / registration: ${shop.ntn}`])}</header>
+    </style></head><body><main class="document"><header><h1>Mahsood Tyres</h1>${p([shop.address,shop.phone,shop.alternatePhone,shop.email,shop.ntn && `NTN / registration: ${shop.ntn}`])}</header>
     <h2>${title}</h2><div class="meta"><div>${p([period,`Status: ${s.party.active ? 'Active' : 'Inactive'}`])}</div><div>${p([s.party.name,s.party.phone,s.party.address])}</div></div>
     <div class="totals"><dl>${summary.map(([label,value])=>`<dt>${e(label)}</dt><dd>${e(money(value))}</dd>`).join('')}</dl></div>
     <p class="explanation">Increase: invoices. Decrease: payments and returns. Positive balance: ${customer?'customer owes shop':'shop owes supplier'}. Negative balance: ${customer?'customer credit / refund due':'supplier credit due to shop'}. Returns record adjustments, not cash refunds.</p>

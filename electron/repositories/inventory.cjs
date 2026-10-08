@@ -1,3 +1,4 @@
+const { localDate } = require('./analytics.cjs');
 const stock = `SELECT p.id AS product_id,p.sku,p.model,p.size,p.brand_id,p.category_id,p.active,
     p.minimum_stock,p.default_selling_price,p.price_units_per_unit,b.name AS brand_name,c.name AS category_name,i.quantity,
     CASE WHEN i.quantity=0 THEN 'out' WHEN i.quantity<=p.minimum_stock THEN 'low' ELSE 'in' END AS stock_status
@@ -26,8 +27,8 @@ function createInventoryRepository(db) {
   ) SELECT * FROM history WHERE ${filters}
     AND (@product_id IS NULL OR product_id=@product_id)
     AND (@movement_type='all' OR movement_type=@movement_type)
-    AND (@from_date IS NULL OR substr(created_at,1,10)>=@from_date)
-    AND (@to_date IS NULL OR substr(created_at,1,10)<=@to_date)
+    AND (@from_date IS NULL OR ${localDate('created_at')}>=@from_date)
+    AND (@to_date IS NULL OR ${localDate('created_at')}<=@to_date)
     ORDER BY id DESC LIMIT @limit OFFSET @offset`);
   const insert =
     db.prepare(`INSERT INTO stock_movements(product_id,movement_type,quantity_change,unit_cost,notes)

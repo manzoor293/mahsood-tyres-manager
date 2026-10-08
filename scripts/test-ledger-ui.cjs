@@ -35,7 +35,7 @@ app.on('browser-window-created',(_,window)=>{
       await wait("document.body.textContent.includes('2026-09-26 to 2026-09-26')");
       assert.ok(await evaluate("document.querySelector('[data-ledger-metric=\"Opening Balance\"]').textContent.includes('-95.01')"));
       await click('Preview / Print / Save as PDF');await wait("Boolean(document.querySelector('iframe'))");
-      const html=await evaluate("document.querySelector('iframe').srcdoc");assert.ok(html.includes('CUSTOMER LEDGER STATEMENT'));assert.ok(html.includes('S.NO'));assert.ok(html.includes('Mahsood Test Shop'));
+      const html=await evaluate("document.querySelector('iframe').srcdoc");assert.ok(html.includes('CUSTOMER LEDGER STATEMENT'));assert.ok(html.includes('S.NO'));assert.ok(html.includes('<h1>Mahsood Tyres</h1>'));
       await click('Close Preview');
       await input('ledger-from','2026-09-27');await click('Apply filters');await wait("document.body.textContent.includes('From date must not follow To date.')");
       await click('Reset filters');await wait("document.body.textContent.includes('Select a customer or supplier')");

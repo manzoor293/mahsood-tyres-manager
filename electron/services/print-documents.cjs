@@ -138,8 +138,6 @@ function createDocumentService(db, clock = () => new Date()) {
             Math.max(-difference, 0),
           ],
         ];
-        document.explanation =
-          "Payment-order figures follow saved payment IDs, not backdated payment dates, and exclude return adjustments. Current return-adjusted figures are shown separately below.";
       } else {
         document.explanation =
           "This legacy payment is not linked to an invoice. No invoice balance or allocation is implied.";

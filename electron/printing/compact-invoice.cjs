@@ -22,7 +22,7 @@ function renderCompactInvoice(
     @page { size: ${invoicePaper.widthMm}mm ${invoicePaper.heightMm}mm; margin: ${invoicePaper.marginMm}mm; }
     :root { --paper-width: ${invoicePaper.widthMm}mm; --paper-margin: ${invoicePaper.marginMm}mm; }
     ${css}</style></head><body><main class="compact-invoice">
-    <header class="brand"><img class="logo" src="${logo}" alt="Mahsood Tyres"><div><h1 class="title">Mahsood Tyres</h1>${paragraphs([shop.address, [shop.phone, shop.alternatePhone].filter(Boolean).join(" / "), shop.email, shop.ntn && `NTN / registration: ${shop.ntn}`])}</div></header>
+    <header class="brand"><img class="logo" src="${logo}" alt="Mahsood Tyres"><div><h1 class="title">Mahsood Tyres</h1>${paragraphs([shop.address, [shop.phone && `Phone: ${shop.phone}`, shop.alternatePhone && `WhatsApp: ${shop.alternatePhone}`].filter(Boolean).join(" / "), shop.email, shop.ntn && `NTN / registration: ${shop.ntn}`])}</div></header>
     <div class="title-bar"><h2>${d.type === "saleInvoice" ? "SALES INVOICE" : "PURCHASE INVOICE"}</h2><div><p>Reference: <strong>${e(d.reference)}</strong></p><p>Date: ${e(date(d.date))}</p></div></div>
     <section class="party"><div><h3>${e(d.contactLabel)}</h3>${paragraphs([d.contact.name === "Walk-in" ? "Walk-in Customer" : d.contact.name, d.contact.phone, d.contact.address])}</div>${d.method ? `<div><h3>Payment method</h3><p>${e(d.method)}</p></div>` : ""}</section>
     <section class="original"><h3>${e(d.sectionTitle)}</h3>${itemTable}<table class="invoice-totals" aria-label="Original invoice totals"><tbody>${rows(d.totals)}</tbody></table></section>

@@ -1,3 +1,4 @@
+const { localDate } = require('./analytics.cjs');
 const expenseFields = [
   "expense_category_id",
   "amount",
@@ -13,8 +14,8 @@ function createExpenseRepository(db) {
     (@search='' OR instr(lower(e.description),lower(@search))>0 OR instr(lower(c.name),lower(@search))>0)
     AND (@expense_category_id IS NULL OR e.expense_category_id=@expense_category_id)
     AND (@payment_method='all' OR e.payment_method=@payment_method)
-    AND (@from_date IS NULL OR substr(e.spent_at,1,10)>=@from_date)
-    AND (@to_date IS NULL OR substr(e.spent_at,1,10)<=@to_date)
+    AND (@from_date IS NULL OR ${localDate('e.spent_at')}>=@from_date)
+    AND (@to_date IS NULL OR ${localDate('e.spent_at')}<=@to_date)
     ORDER BY e.spent_at DESC,e.id DESC LIMIT @limit OFFSET @offset`);
   const insert = db.prepare(
     `INSERT INTO expenses(${expenseFields.join(",")}) VALUES (${expenseFields.map((f) => `@${f}`).join(",")})`,

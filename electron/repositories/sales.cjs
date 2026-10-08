@@ -1,4 +1,4 @@
-const { returnTotal, withBalance } = require("./analytics.cjs");
+const { returnTotal, withBalance, localDate } = require("./analytics.cjs");
 function createSaleRepository(db) {
   const summary = `SELECT s.*,c.name AS customer_name,c.phone AS customer_phone,c.address AS customer_address,
     ${returnTotal("sale", "s.id")} AS returned_value,s.total-${returnTotal("sale", "s.id")} AS effective_total,
@@ -17,7 +17,7 @@ function createSaleRepository(db) {
   const list = db.prepare(`SELECT * FROM (${projection}) WHERE
     (@search='' OR instr(lower(invoice_number),lower(@search))>0 OR instr(lower(coalesce(customer_name,'')),lower(@search))>0)
     AND (@customer_id IS NULL OR customer_id=@customer_id) AND (@walk_in=0 OR customer_id IS NULL)
-    AND (@from_date IS NULL OR substr(sold_at,1,10)>=@from_date) AND (@to_date IS NULL OR substr(sold_at,1,10)<=@to_date)
+    AND (@from_date IS NULL OR ${localDate('sold_at')}>=@from_date) AND (@to_date IS NULL OR ${localDate('sold_at')}<=@to_date)
     AND (@payment_status='all' OR payment_status=@payment_status)
     ORDER BY sold_at DESC,id DESC LIMIT @limit OFFSET @offset`);
   const product = db.prepare(`SELECT p.id,p.sku,p.active,i.quantity,

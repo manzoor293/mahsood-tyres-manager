@@ -15,7 +15,7 @@ import { formatPrice } from "../../utils/catalog.js";
 
 function Panel({ title, note, children, action }) {
   return (
-    <Paper variant="outlined" sx={{ p: 2.5, minWidth: 0 }}>
+    <Paper variant="outlined" sx={{ p: 2.5, minWidth: 0, borderRadius: 3, borderColor: "#e0e7ee", boxShadow: "0 2px 5px #172b3a04" }}>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-lg font-semibold">{title}</h2>
         {action}

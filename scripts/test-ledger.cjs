@@ -65,7 +65,7 @@ app.whenReady().then(async()=>{
     db.exec("UPDATE customers SET name='Khyber <>:/ Transport' WHERE id=1;");
     for(const party_type of ['customer','supplier']) {
       const q={party_type,party_id:1},preview=printing.preview(q);
-      assert.ok(preview.html.includes('Mahsood Test Shop'));assert.ok(preview.html.includes('TEST-NTN'));assert.ok(preview.html.includes('S.NO'));assert.ok(preview.html.includes('Complete Account History'));
+      assert.ok(preview.html.includes('<h1>Mahsood Tyres</h1>'));assert.ok(preview.html.includes('TEST-NTN'));assert.ok(preview.html.includes('S.NO'));assert.ok(preview.html.includes('Complete Account History'));
       assert.ok(!/[<>:"/\\|?*]/.test(preview.filename));
       assert.ok(printing.preview({...q,from_date:'2026-09-26',to_date:'2026-09-26'}).html.includes('2026-09-26 to 2026-09-26'));
       assert.equal((await printing.savePdf(q,owner)).status,'saved');assert.ok(bytes.toString('latin1').startsWith('%PDF'));

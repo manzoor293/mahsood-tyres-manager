@@ -46,7 +46,8 @@ const {
   getDatabasePath,
 } = require("./database/index.cjs");
 
-app.setName("Mahsood Tyres");
+const { configureProfile } = require("./utils/profile.cjs");
+const profileConflict = configureProfile(app);
 const development = !app.isPackaged && process.argv.includes("--dev");
 const developmentPort = Number(process.env.MAHSOOD_DEV_PORT || 5173);
 if (
@@ -205,6 +206,13 @@ if (primaryInstance)
   app
     .whenReady()
     .then(async () => {
+      if (profileConflict) {
+        dialog.showErrorBox(
+          "Shop data profile conflict",
+          `Two shop databases were found. Startup has stopped to protect both. Review and back up both profiles before choosing which database to use:\n\n${profileConflict.legacy}\n\n${profileConflict.branded}\n\nNo shop data has been moved or replaced.`,
+        );
+        throw new Error("Conflicting legacy and pre-release shop data profiles.");
+      }
       recoverInterruptedRestore(getDatabasePath(app));
       const database = initializeDatabase(app);
       const gate = createMaintenanceGate(ipcMain);

@@ -80,7 +80,7 @@ app.whenReady().then(() => {
       service.listMovements({ limit: 1, offset: 1 })[0].resulting_quantity,
       10,
     );
-    const day = history[0].created_at.slice(0, 10);
+    const day = require('../electron/utils/analytics.cjs').dateKey(new Date(history[0].created_at));
     assert.equal(
       service.listMovements({ from_date: day, to_date: day }).length,
       3,

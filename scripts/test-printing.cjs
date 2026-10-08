@@ -44,6 +44,7 @@ app.whenReady().then(async () => {
       assert.equal(document.shop.ntn, "TEST-NTN");
       const html = renderDocument(document);
       assert.ok(html.startsWith("<!doctype html>"));
+      assert.match(html, /<h1(?: class="title")?>Mahsood Tyres<\/h1>/);
       assert.match(html, type.endsWith('Invoice') ? /@page\s*\{\s*size:\s*148mm 210mm/ : /@page\s*\{\s*size:\s*A4/);
       assert.ok(!html.includes("<script"));
     }
@@ -74,6 +75,29 @@ app.whenReady().then(async () => {
     assert.match(renderDocument(purchase), /Qty \(Tyres\)/);
     assert.match(renderDocument(purchase), /Supplier credit due/);
     assert.match(renderDocument(sale), /Customer credit \/ refund due/);
+    // Both invoice types share the approved header; contact labels alone vary.
+    for (const invoice of [sale, purchase]) {
+      const snapshot = structuredClone(invoice);
+      const outsideHeader = (html) => html.replace(/<header class="brand">[\s\S]*?<\/header>/, "");
+      const originalBody = outsideHeader(renderDocument(invoice));
+      for (const [phone, alternatePhone] of [
+        ["0332 7777783", "0300 1234567"],
+        ["0332 7777783", ""],
+        ["", "0300 1234567"],
+        ["", ""],
+      ]) {
+        const html = renderDocument({ ...invoice, shop: { ...invoice.shop, phone, alternatePhone } });
+        const header = html.match(/<header class="brand">[\s\S]*?<\/header>/)[0];
+        assert.equal(header.includes("Phone:"), Boolean(phone));
+        assert.equal(header.includes("WhatsApp:"), Boolean(alternatePhone));
+        if (phone) assert.equal(header.split(`Phone: ${phone}`).length - 1, 1);
+        if (alternatePhone) assert.equal(header.split(`WhatsApp: ${alternatePhone}`).length - 1, 1);
+        if (phone && alternatePhone) assert.ok(header.includes(`<p>Phone: ${phone} / WhatsApp: ${alternatePhone}</p>`));
+        assert.doesNotMatch(header, /<p><\/p>|<p> \/ | \/ <\/p>/);
+        assert.equal(outsideHeader(html), originalBody, "Invoice layout, items and financial values must remain unchanged");
+      }
+      assert.deepEqual(invoice, snapshot, "Rendering must not mutate invoice data");
+    }
     const payment = service.getDocument("customerPayment", 4);
     assert.equal(payment.reference, "CP-000004");
     assert.equal(

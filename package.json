@@ -1,12 +1,15 @@
 {
   "name": "mahsood-tyre-manager",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "Sales, Inventory & Shop Management System",
   "type": "module",
   "main": "electron/main.cjs",
   "author": "Manzoor-Ahmad",
   "scripts": {
+    "test:money": "node scripts/test-money.mjs",
+    "test:dates": "node scripts/test-release-data.mjs --dates",
+    "test:release-data": "node scripts/test-release-data.mjs",
     "test:shipment": "node scripts/test-products-ui.mjs --shipment-backend",
     "test:shipment:ui": "node scripts/test-products-ui.mjs --shipment-ui",
     "test:pairs": "node scripts/test-products-ui.mjs --pairs-backend",
@@ -94,6 +97,12 @@
     "asar": true,
     "asarUnpack": [
       "node_modules/better-sqlite3/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "build/icon.ico",
+        "to": "icon.ico"
+      }
     ],
     "npmRebuild": true,
     "win": {

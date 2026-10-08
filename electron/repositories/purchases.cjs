@@ -1,4 +1,4 @@
-const { returnTotal, returnedQuantity, withBalance } = require("./analytics.cjs");
+const { returnTotal, returnedQuantity, withBalance, localDate } = require("./analytics.cjs");
 function createPurchaseRepository(db) {
   const summary = `SELECT p.*, s.name AS supplier_name,
     ${returnTotal("purchase", "p.id")} AS returned_value,p.total-${returnTotal("purchase", "p.id")} AS effective_total,
@@ -19,8 +19,8 @@ function createPurchaseRepository(db) {
   const list = db.prepare(`SELECT * FROM (${projection}) WHERE
     (@search='' OR instr(lower(invoice_number),lower(@search))>0 OR instr(lower(supplier_name),lower(@search))>0)
     AND (@supplier_id IS NULL OR supplier_id=@supplier_id)
-    AND (@from_date IS NULL OR substr(purchased_at,1,10)>=@from_date)
-    AND (@to_date IS NULL OR substr(purchased_at,1,10)<=@to_date)
+    AND (@from_date IS NULL OR ${localDate('purchased_at')}>=@from_date)
+    AND (@to_date IS NULL OR ${localDate('purchased_at')}<=@to_date)
     AND (@payment_status='all' OR payment_status=@payment_status)
     ORDER BY purchased_at DESC,id DESC LIMIT @limit OFFSET @offset`);
   return {

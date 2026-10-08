@@ -159,7 +159,7 @@ function verifyStatusBackend(db, fixture) {
     services.expenses.getById(fixture.expense.id).expense_category_id,
     records.expenseCategories.id,
   );
-  assert.equal(db.pragma("user_version", { simple: true }), 5);
+  assert.equal(db.pragma("user_version", { simple: true }), 7);
   assert.deepEqual(db.pragma("foreign_key_check"), []);
   console.log(
     "PASS: all six status services, persisted 1→0→1, filters, invalid/missing IDs, restricted fields, rollback, unchanged history and new expense/purchase/sale validation.",

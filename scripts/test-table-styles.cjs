@@ -7,6 +7,13 @@ const entry = process.argv[2];
 if (!/^test-[a-z-]+-ui\.cjs$/.test(entry || "")) throw Error("UI test entry required");
 const seen = new Set();
 app.on("browser-window-created", (_, window) => {
+  window.webContents.on("console-message", details => {
+    const message = details.message || '';
+    if (details.level === 'error' || /Each child in a list|Encountered two children|uncontrolled.*controlled|controlled.*uncontrolled/i.test(message)) {
+      console.error(`FAIL renderer console (${entry}): ${message}`);
+      app.exit(1);
+    }
+  });
   const execute = window.webContents.executeJavaScript.bind(window.webContents);
   window.webContents.executeJavaScript = async (...args) => {
     const result = await execute(...args);

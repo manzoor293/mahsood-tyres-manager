@@ -1,0 +1,10 @@
+const { app } = require('electron');
+const path = require('node:path');
+const root = process.env.MAHSOOD_UI_TEST_DATA;
+if (!root || !path.basename(root).startsWith('mahsood-release-data-')) throw Error('Isolated profile required');
+app.setPath('appData', root);
+app.setPath('sessionData', root);
+if (process.argv[2] === '--current') require('../electron/utils/profile.cjs').configureProfile(app);
+else app.setName(process.argv[2]);
+console.log(JSON.stringify({ name: app.getName(), userData: app.getPath('userData') }));
+app.exit(0);
